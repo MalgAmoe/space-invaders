@@ -18,6 +18,7 @@ ALIENS_NUM_X :: 11
 ALIENS_NUM_Y :: 5
 ALIENS_SPACING :: 6
 ALIENS_BLOCK_WIDTH :: (ALIENS_NUM_X) * (ALIENS_SPACING + ALIEN_SIZE)
+ALIENS_BLOCK_HEIGHT :: (ALIENS_NUM_Y) * (ALIENS_SPACING + ALIEN_SIZE)
 
 Bullet :: struct {
 	position: rl.Vector2,
@@ -34,6 +35,7 @@ aliens_speed: f32
 alien_direction: int
 
 time: f32
+game_over: bool
 
 main :: proc() {
 	rl.SetConfigFlags({.VSYNC_HINT})
@@ -68,6 +70,7 @@ main :: proc() {
 
 		// setup vars
 		dt := rl.GetFrameTime()
+		time_elapsed := rl.GetTime()
 
 		// check inputs
 		player_move_velocity: f32
@@ -90,55 +93,59 @@ main :: proc() {
 		}
 
 		// update state
+		if !game_over {
+			time += dt
 
-		time += dt
-
-		if time > 8 {
-			time = 0
-			aliens_speed += 4
-		}
-
-		for &bullet in player_bullets {
-			bullet.position.y -= BULLET_SPEED * dt
-			if bullet.position.y < -BULLET_SIZE.y {
-				bullet.active = false
+			if time > 9 {
+				time = 0
+				aliens_speed += 4
 			}
-		}
 
-		player_pos_x += player_move_velocity * dt
-		player_pos_x = clamp(player_pos_x, 0, SCREEN_GRID_SIZE - PLAYER_SIZE)
-		player := rl.Rectangle{player_pos_x, PLAYER_POS_Y, PLAYER_SIZE, PLAYER_SIZE}
+			for &bullet in player_bullets {
+				bullet.position.y -= BULLET_SPEED * dt
+				if bullet.position.y < -BULLET_SIZE.y {
+					bullet.active = false
+				}
+			}
 
-		aliens_pos.x += f32(alien_direction) * aliens_speed * dt
+			player_pos_x += player_move_velocity * dt
+			player_pos_x = clamp(player_pos_x, 0, SCREEN_GRID_SIZE - PLAYER_SIZE)
 
-		if aliens_pos.x < 20 || (aliens_pos.x + ALIENS_BLOCK_WIDTH) > SCREEN_GRID_SIZE - 20 {
-			alien_direction *= -1
-			aliens_pos.y += ALIENS_SPACING
-		}
+			aliens_pos.x += f32(alien_direction) * aliens_speed * dt
 
-		for &bullet in player_bullets {
-			if bullet.active {
-				for x in 0 ..< ALIENS_NUM_X {
-					for y in 0 ..< ALIENS_NUM_Y {
-						alien_position_rect := rl.Rectangle {
-							aliens_pos.x + f32(x) * (ALIENS_SPACING + ALIEN_SIZE),
-							aliens_pos.y + f32(y) * (ALIENS_SPACING + ALIEN_SIZE),
-							ALIEN_SIZE,
-							ALIEN_SIZE,
-						}
+			if aliens_pos.x < 20 || (aliens_pos.x + ALIENS_BLOCK_WIDTH) > SCREEN_GRID_SIZE - 20 {
+				alien_direction *= -1
+				aliens_pos.y += ALIENS_SPACING
+			}
 
-						if rl.CheckCollisionRecs(
-							   alien_position_rect,
-							   {
-								   bullet.position.x,
-								   bullet.position.y,
-								   BULLET_SIZE.x,
-								   BULLET_SIZE.y,
-							   },
-						   ) &&
-						   aliens[x][y] {
-							aliens[x][y] = false
-							bullet.active = false
+			if aliens_pos.y + ALIENS_BLOCK_HEIGHT > SCREEN_GRID_SIZE {
+				game_over = true
+			}
+
+			for &bullet in player_bullets {
+				if bullet.active {
+					for x in 0 ..< ALIENS_NUM_X {
+						for y in 0 ..< ALIENS_NUM_Y {
+							alien_position_rect := rl.Rectangle {
+								aliens_pos.x + f32(x) * (ALIENS_SPACING + ALIEN_SIZE),
+								aliens_pos.y + f32(y) * (ALIENS_SPACING + ALIEN_SIZE),
+								ALIEN_SIZE,
+								ALIEN_SIZE,
+							}
+
+							if rl.CheckCollisionRecs(
+								   alien_position_rect,
+								   {
+									   bullet.position.x,
+									   bullet.position.y,
+									   BULLET_SIZE.x,
+									   BULLET_SIZE.y,
+								   },
+							   ) &&
+							   aliens[x][y] {
+								aliens[x][y] = false
+								bullet.active = false
+							}
 						}
 					}
 				}
@@ -146,6 +153,7 @@ main :: proc() {
 		}
 
 		// draw
+		player := rl.Rectangle{player_pos_x, PLAYER_POS_Y, PLAYER_SIZE, PLAYER_SIZE}
 		rl.DrawRectangleRec(player, rl.MAGENTA)
 
 		for bullet in player_bullets {
@@ -166,6 +174,27 @@ main :: proc() {
 					rl.DrawRectangleRec(position_rect, rl.PINK)
 				}
 			}
+		}
+
+		if game_over {
+			game_over_text := fmt.ctprint("GAME OVER")
+			game_over_font_size := i32(u8(time_elapsed / 0.01)) / 3
+
+			game_over_text_width := rl.MeasureText(game_over_text, game_over_font_size)
+			game_over_color := rl.Color {
+				u8(time_elapsed * 5),
+				u8(time_elapsed / 0.01),
+				u8(time_elapsed),
+				255,
+			}
+
+			rl.DrawText(
+				game_over_text,
+				SCREEN_GRID_SIZE / 2 - game_over_text_width / 2,
+				SCREEN_GRID_SIZE / 2 - game_over_font_size / 2,
+				game_over_font_size,
+				game_over_color,
+			)
 		}
 
 		rl.ClearBackground(rl.DARKPURPLE)
