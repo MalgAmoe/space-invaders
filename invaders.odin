@@ -16,7 +16,8 @@ BULLET_SIZE :: rl.Vector2{2, 4}
 ALIEN_SIZE :: 10
 ALIENS_NUM_X :: 11
 ALIENS_NUM_Y :: 5
-ALIENS_SPACING :: 4
+ALIENS_SPACING :: 6
+ALIENS_BLOCK_WIDTH :: (ALIENS_NUM_X) * (ALIENS_SPACING + ALIEN_SIZE)
 
 Bullet :: struct {
 	position: rl.Vector2,
@@ -29,6 +30,10 @@ player_bullet_index: int
 
 aliens: [ALIENS_NUM_X][ALIENS_NUM_Y]bool
 aliens_pos: rl.Vector2
+aliens_speed: f32
+alien_direction: int
+
+time: f32
 
 main :: proc() {
 	rl.SetConfigFlags({.VSYNC_HINT})
@@ -41,6 +46,8 @@ main :: proc() {
 	player_pos_x = f32(SCREEN_GRID_SIZE - PLAYER_SIZE) * 0.5
 
 	aliens_pos = {SCREEN_GRID_SIZE / 10, SCREEN_GRID_SIZE / 10}
+	aliens_speed = 10
+	alien_direction = 1
 
 	for &rows in aliens {
 		for &alien in rows {
@@ -84,6 +91,13 @@ main :: proc() {
 
 		// update state
 
+		time += dt
+
+		if time > 8 {
+			time = 0
+			aliens_speed += 4
+		}
+
 		for &bullet in player_bullets {
 			bullet.position.y -= BULLET_SPEED * dt
 			if bullet.position.y < -BULLET_SIZE.y {
@@ -94,6 +108,13 @@ main :: proc() {
 		player_pos_x += player_move_velocity * dt
 		player_pos_x = clamp(player_pos_x, 0, SCREEN_GRID_SIZE - PLAYER_SIZE)
 		player := rl.Rectangle{player_pos_x, PLAYER_POS_Y, PLAYER_SIZE, PLAYER_SIZE}
+
+		aliens_pos.x += f32(alien_direction) * aliens_speed * dt
+
+		if aliens_pos.x < 20 || (aliens_pos.x + ALIENS_BLOCK_WIDTH) > SCREEN_GRID_SIZE - 20 {
+			alien_direction *= -1
+			aliens_pos.y += ALIENS_SPACING
+		}
 
 		for &bullet in player_bullets {
 			if bullet.active {
@@ -149,5 +170,4 @@ main :: proc() {
 
 		rl.ClearBackground(rl.DARKPURPLE)
 	}
-
 }
