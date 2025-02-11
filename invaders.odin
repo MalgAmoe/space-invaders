@@ -57,6 +57,20 @@ main :: proc() {
 		}
 	}
 
+	// kinda crt shader
+	target_texture := rl.LoadRenderTexture(SCREEN_GRID_SIZE, SCREEN_GRID_SIZE)
+	crt_shader := rl.LoadShader(nil, "crt.glsl")
+
+	i_time_loc := rl.GetShaderLocation(crt_shader, "iTime")
+	screen_resolution_loc := rl.GetShaderLocation(crt_shader, "screenResolution")
+	curvature_loc := rl.GetShaderLocation(crt_shader, "curvature")
+
+	screen_resolution: [2]f32 = {f32(SCREEN_SIZE), f32(SCREEN_SIZE)}
+	rl.SetShaderValue(crt_shader, screen_resolution_loc, &screen_resolution, .VEC2)
+
+	curvature: f32 = 30
+	rl.SetShaderValue(crt_shader, curvature_loc, &curvature, .FLOAT)
+
 	for !rl.WindowShouldClose() {
 		// setup basic
 		rl.BeginDrawing()
@@ -162,8 +176,8 @@ main :: proc() {
 			}
 		}
 
-		for x in 0 ..< ALIENS_NUM_X {
-			for y in 0 ..< ALIENS_NUM_Y {
+		for x := ALIENS_NUM_X - 1; x >= 0; x -= 1 {
+			for y := ALIENS_NUM_Y - 1; y >= 0; y -= 1 {
 				if aliens[x][y] {
 					position_rect := rl.Rectangle {
 						aliens_pos.x + f32(x) * (ALIENS_SPACING + ALIEN_SIZE),
@@ -197,6 +211,23 @@ main :: proc() {
 			)
 		}
 
+
 		rl.ClearBackground(rl.DARKPURPLE)
+
+		rl.SetShaderValue(crt_shader, i_time_loc, &time_elapsed, .FLOAT)
+
+		rl.BeginShaderMode(crt_shader)
+		rl.DrawTextureRec(
+			target_texture.texture,
+			rl.Rectangle {
+				0,
+				0,
+				f32(target_texture.texture.width),
+				f32(target_texture.texture.height),
+			},
+			{0, 0},
+			rl.WHITE,
+		)
+		rl.EndShaderMode()
 	}
 }
