@@ -103,7 +103,7 @@ main :: proc() {
 
 
 	for !rl.WindowShouldClose() {
-		dt := f32(num_aliens_alive) / (difficulty * 2000)
+		dt := f32(num_aliens_alive) / (difficulty * 1000 + 3000)
 		time_elapsed := rl.GetTime()
 
 		rl.SetShaderValue(crt_shader, i_time_loc, &time_elapsed, .FLOAT)
@@ -142,18 +142,21 @@ main :: proc() {
 				}
 
 				move_alien_horizontally()
+
 				if last_alien_moved_y >= 0 {
 					move_alien_vertically()
 				}
 
 				if last_alien_moved_x == len(alien_position) - 1 {
-					for alien in alien_position {
-						if alien.x < 10 || alien.x > SCREEN_GRID_SIZE - ALIEN_SIZE - 10 {
-							alien_direction *= -1
-							last_alien_moved_y = len(alien_position) - 1
-							break
+					for alien, index in alien_position {
+						if alien_alive[index] {
+							if alien.x < 10 || alien.x > SCREEN_GRID_SIZE - ALIEN_SIZE - 10 {
+								alien_direction *= -1
+								last_alien_moved_y = len(alien_position) - 1
+								break
+							}
 						}
-						if alien.y > PLAYER_POS_Y - ALIEN_SIZE {
+						if alien.y > PLAYER_POS_Y {
 							game_over = true
 						}
 					}
