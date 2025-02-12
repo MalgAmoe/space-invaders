@@ -1,6 +1,7 @@
 package invaders
 
 import "core:fmt"
+import "core:math/rand"
 import rl "vendor:raylib"
 
 SCREEN_SIZE :: 800
@@ -10,6 +11,7 @@ PLAYER_POS_Y :: 280
 PLAYER_SPEED :: 100
 
 BULLET_SPEED :: 400
+ALIEN_BULLET_SPEED :: 100
 MAX_BULLET :: 20
 BULLET_SIZE :: rl.Vector2{2, 4}
 
@@ -31,9 +33,11 @@ player_bullets: [dynamic]rl.Vector2
 
 time: f32
 accumulated_time: f32
+accumulated_time2: f32
 game_over: bool
 difficulty: f32
 score: f32
+lifes_available: int
 
 alien_direction: int
 num_aliens_alive: int
@@ -41,9 +45,10 @@ alien_alive: [ALIENS_NUM_X * ALIENS_NUM_Y]bool
 alien_stats: [ALIENS_NUM_X * ALIENS_NUM_Y]rl.Vector4
 last_alien_moved_x: int
 last_alien_moved_y: int
+alien_bullets: [dynamic]rl.Vector2
 
-place_aliens :: proc(difficulty: f32) {
-	start_y := (SCREEN_GRID_SIZE - ALIENS_BLOCK_HEIGHT - 16) * 0.5 + difficulty * 10
+place_aliens :: proc(difficulty_to_use: f32) {
+	start_y := (SCREEN_GRID_SIZE - ALIENS_BLOCK_HEIGHT - 16) * 0.5 + difficulty_to_use * 10
 
 	for alien in 0 ..< ALIENS_NUM_X * ALIENS_NUM_Y {
 		alien_alive[alien] = true
@@ -89,9 +94,9 @@ move_alien_vertically :: proc() {
 	last_alien_moved_y -= 1
 }
 
-restart :: proc() {
+restart :: proc(difficulty_to_use: f32) {
 	alien_direction = 1
-	place_aliens(difficulty)
+	place_aliens(difficulty_to_use)
 }
 
 main :: proc() {
@@ -105,8 +110,9 @@ main :: proc() {
 	player_pos_x = f32(SCREEN_GRID_SIZE - PLAYER_SIZE) * 0.5
 
 	difficulty = 1
+	lifes_available = 3
 
-	restart()
+	restart(difficulty)
 
 	// kinda crt shader
 	target_texture := rl.LoadRenderTexture(SCREEN_GRID_SIZE, SCREEN_GRID_SIZE)
@@ -123,7 +129,7 @@ main :: proc() {
 	rl.SetShaderValue(crt_shader, curvature_loc, &curvature, .FLOAT)
 
 	for !rl.WindowShouldClose() {
-		dt := f32(num_aliens_alive) / (difficulty * 1000 + 3000)
+		dt := f32(num_aliens_alive) / (difficulty * 500 + 4000)
 		time_elapsed := rl.GetTime()
 
 		rl.SetShaderValue(crt_shader, i_time_loc, &time_elapsed, .FLOAT)
@@ -141,15 +147,18 @@ main :: proc() {
 			}
 
 			if rl.IsKeyPressed(.SPACE) {
-				append(
-					&player_bullets,
-					rl.Vector2 {
-						player_pos_x + (PLAYER_SIZE - BULLET_SIZE.x) * 0.5,
-						PLAYER_POS_Y - BULLET_SIZE.y,
-					},
-				)
+				if len(player_bullets) < 1 {
+					append(
+						&player_bullets,
+						rl.Vector2 {
+							player_pos_x + (PLAYER_SIZE - BULLET_SIZE.x) * 0.5,
+							PLAYER_POS_Y - BULLET_SIZE.y,
+						},
+					)
+				}
 			}
 
+			// update
 			for accumulated_time >= dt {
 				player_pos_x += player_move_velocity * dt
 				player_pos_x = clamp(player_pos_x, 0, SCREEN_GRID_SIZE - PLAYER_SIZE)
@@ -161,10 +170,49 @@ main :: proc() {
 					}
 				}
 
+				for &bullet, index in alien_bullets {
+					bullet.y += ALIEN_BULLET_SPEED * dt
+					if bullet.y > SCREEN_GRID_SIZE {
+						unordered_remove(&alien_bullets, index)
+					}
+				}
+
+
 				move_alien_horizontally()
 
 				if last_alien_moved_y >= 0 {
 					move_alien_vertically()
+				}
+
+				if accumulated_time2 > 0 {
+					accumulated_time2 -= dt
+				} else {
+					if len(alien_bullets) < 3 {
+						random_alien_to_count := rand.int_max(num_aliens_alive + 1)
+						alien_to_fire: rl.Vector4
+						alien_index: int
+						for is_alive, index in alien_alive {
+							if is_alive do random_alien_to_count -= 1
+							if random_alien_to_count == 0 {
+								alien_index = index
+								break
+							}
+						}
+
+						is_alive := alien_alive[alien_index]
+						if is_alive {
+							alien_to_fire = alien_stats[alien_index]
+							append(
+								&alien_bullets,
+								rl.Vector2 {
+									alien_to_fire.x + alien_to_fire.z / 2,
+									alien_to_fire.y + alien_to_fire.z,
+								},
+							)
+							random_time := rand.float32()
+							accumulated_time2 = random_time + 0.2
+						}
+					}
 				}
 
 				if last_alien_moved_x == len(alien_stats) - 1 {
@@ -202,16 +250,52 @@ main :: proc() {
 							num_aliens_alive -= 1
 							score += alien_stats[alien_index].w
 							if num_aliens_alive == 0 {
-								difficulty += 1
-								restart()
+								difficulty = f32(int(1 + difficulty) % 11)
+								restart(difficulty)
 								break bullets_loop
 							}
 						}
 					}
+				}
 
+				for bullet, index in alien_bullets {
+					if len(player_bullets) == 1 {
+						if rl.CheckCollisionRecs(
+							{
+								player_bullets[0].x,
+								player_bullets[0].y,
+								BULLET_SIZE.x,
+								BULLET_SIZE.y,
+							},
+							{bullet.x, bullet.y, BULLET_SIZE.x, BULLET_SIZE.y},
+						) {
+							unordered_remove(&alien_bullets, index)
+							unordered_remove(&player_bullets, 0)
+						}
+					}
+					if rl.CheckCollisionRecs(
+						{player_pos_x, PLAYER_POS_Y, PLAYER_SIZE, PLAYER_SIZE},
+						{bullet.x, bullet.y, BULLET_SIZE.x, BULLET_SIZE.y},
+					) {
+						lifes_available -= 1
+						unordered_remove(&alien_bullets, index)
+					}
+				}
+
+				if lifes_available < 1 {
+					game_over = true
 				}
 
 				accumulated_time -= dt
+			}
+
+		} else {
+			if rl.IsKeyPressed(.SPACE) {
+				game_over = false
+				difficulty = 1
+				lifes_available = 3
+
+				restart(difficulty)
 			}
 		}
 
@@ -225,29 +309,37 @@ main :: proc() {
 		rl.BeginMode2D(camera)
 		defer rl.EndMode2D()
 
-		score_text := fmt.ctprint(score)
-		rl.DrawText(score_text, 5, 5, 10, rl.WHITE)
+		if !game_over {
+			score_text := fmt.ctprint(score)
+			rl.DrawText(score_text, 5, 5, 10, rl.WHITE)
 
-		player := rl.Rectangle{player_pos_x, PLAYER_POS_Y, PLAYER_SIZE, PLAYER_SIZE}
-		rl.DrawRectangleRec(player, rl.MAGENTA)
+			lifes_text := fmt.ctprintf("Lifes available: %v", lifes_available)
+			lifes_text_size := rl.MeasureText(lifes_text, 10)
+			rl.DrawText(lifes_text, SCREEN_GRID_SIZE - lifes_text_size - 5, 5, 10, rl.WHITE)
 
-		for bullet in player_bullets {
-			rl.DrawRectangleV({bullet.x, bullet.y}, BULLET_SIZE, rl.YELLOW)
-		}
+			player := rl.Rectangle{player_pos_x, PLAYER_POS_Y, PLAYER_SIZE, PLAYER_SIZE}
+			rl.DrawRectangleRec(player, rl.MAGENTA)
 
-		for alien_number in 0 ..< ALIENS_NUM_X * ALIENS_NUM_Y {
-			if alien_alive[alien_number] {
-				position_rect := rl.Rectangle {
-					alien_stats[alien_number].x,
-					alien_stats[alien_number].y,
-					alien_stats[alien_number].z,
-					alien_stats[alien_number].z,
-				}
-				rl.DrawRectangleRec(position_rect, rl.PINK)
+			for bullet in player_bullets {
+				rl.DrawRectangleV({bullet.x, bullet.y}, BULLET_SIZE, rl.YELLOW)
 			}
-		}
 
-		if game_over {
+			for bullet in alien_bullets {
+				rl.DrawRectangleV({bullet.x, bullet.y}, BULLET_SIZE, rl.GREEN)
+			}
+
+			for alien_number in 0 ..< ALIENS_NUM_X * ALIENS_NUM_Y {
+				if alien_alive[alien_number] {
+					position_rect := rl.Rectangle {
+						alien_stats[alien_number].x,
+						alien_stats[alien_number].y,
+						alien_stats[alien_number].z,
+						alien_stats[alien_number].z,
+					}
+					rl.DrawRectangleRec(position_rect, rl.PINK)
+				}
+			}
+		} else {
 			game_over_text := fmt.ctprint("GAME OVER")
 			game_over_font_size := i32(u8(time_elapsed / 0.01)) / 3
 
@@ -276,6 +368,18 @@ main :: proc() {
 				SCREEN_GRID_SIZE / 3 - score_over_font_size / 2,
 				score_over_font_size,
 				game_over_color,
+			)
+
+			restart_over_text := fmt.ctprint("PRESS SPACE TO RESTART")
+			restart_over_font_size: i32 = 10
+			restart_over_text_width := rl.MeasureText(restart_over_text, restart_over_font_size)
+			restart_over_color := rl.Color{255, 255, 255, u8(time_elapsed * 1000)}
+			rl.DrawText(
+				restart_over_text,
+				SCREEN_GRID_SIZE / 2 - restart_over_text_width / 2,
+				SCREEN_GRID_SIZE - score_over_font_size - 10,
+				restart_over_font_size,
+				restart_over_color,
 			)
 		}
 
