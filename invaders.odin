@@ -48,7 +48,7 @@ last_alien_moved_y: int
 alien_bullets: [dynamic]rl.Vector2
 
 place_aliens :: proc(difficulty_to_use: f32) {
-	start_y := (SCREEN_GRID_SIZE - ALIENS_BLOCK_HEIGHT - 16) * 0.5 + difficulty_to_use * 10
+	start_y := (SCREEN_GRID_SIZE - ALIENS_BLOCK_HEIGHT) * 0.3 + difficulty_to_use * 10
 
 	for alien in 0 ..< ALIENS_NUM_X * ALIENS_NUM_Y {
 		alien_alive[alien] = true
@@ -94,7 +94,18 @@ move_alien_vertically :: proc() {
 	last_alien_moved_y -= 1
 }
 
+delete_bullets :: proc() {
+	if len(alien_bullets) > 0 {
+		remove_range(&alien_bullets, 0, len(alien_bullets))
+	}
+	if len(player_bullets) > 0 {
+		unordered_remove(&player_bullets, 0)
+	}
+}
+
 restart :: proc(difficulty_to_use: f32) {
+	delete_bullets()
+	player_pos_x = f32(SCREEN_GRID_SIZE - PLAYER_SIZE) * 0.5
 	alien_direction = 1
 	place_aliens(difficulty_to_use)
 }
@@ -294,6 +305,7 @@ main :: proc() {
 				game_over = false
 				difficulty = 1
 				lifes_available = 3
+				score = 0
 
 				restart(difficulty)
 			}
