@@ -122,10 +122,45 @@ place_aliens :: proc(difficulty_to_use: f32) {
 	last_alien_moved_y = -1
 }
 
+alien_over_shield :: proc(alien: rl.Vector4, offset: int) {
+	if alien.y + alien.w > SHIELD_Y_POS {
+		for &shield in shields {
+			if rl.CheckCollisionRecs(
+				{alien.x, alien.y, alien.w, alien.w},
+				{
+					shield.position.x,
+					shield.position.y,
+					shield.position.x + SHIELD_WIDTH,
+					shield.position.y + SHIELD_HEIGHT,
+				},
+			) {
+				for &column, column_index in shield.pixels {
+					for &pixel, row_index in column {
+						if pixel {
+							if rl.CheckCollisionPointRec(
+								{
+									shield.position.x + f32(column_index),
+									shield.position.y + f32(row_index),
+								},
+								{alien.x, alien.y - f32(offset), alien.z, alien.z + f32(offset)},
+							) {
+								pixel = false
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 move_alien_horizontally :: proc() {
 	if alien_alive[last_alien_moved_x] {
 		alien_stats[last_alien_moved_x].x =
 			f32(alien_direction * 2) + alien_stats[last_alien_moved_x].x
+
+		alien := alien_stats[last_alien_moved_x]
+		alien_over_shield(alien, 0)
 	}
 	last_alien_moved_x = last_alien_moved_x > 0 ? last_alien_moved_x - 1 : len(alien_stats) - 1
 }
@@ -134,6 +169,9 @@ move_alien_vertically :: proc() {
 	if alien_alive[last_alien_moved_y] {
 		alien_stats[last_alien_moved_y].y =
 			alien_stats[last_alien_moved_y].y + ALIEN_SIZE + ALIENS_SPACING
+
+		alien := alien_stats[last_alien_moved_y]
+		alien_over_shield(alien, ALIENS_SPACING)
 	}
 	last_alien_moved_y -= 1
 }
@@ -238,7 +276,6 @@ main :: proc() {
 					}
 				}
 
-
 				move_alien_horizontally()
 
 				if last_alien_moved_y >= 0 {
@@ -341,19 +378,14 @@ main :: proc() {
 					}
 
 					for alien, alien_index in alien_stats {
-						alien_stats_rect := rl.Rectangle {
-							alien_stats[alien_index].x,
-							alien_stats[alien_index].y,
-							alien_stats[alien_index].z,
-							alien_stats[alien_index].z,
-						}
+						alien_stats_rect := rl.Rectangle{alien.x, alien.y, alien.z, alien.z}
 
 						if rl.CheckCollisionRecs(alien_stats_rect, bullet_rect) &&
 						   alien_alive[alien_index] {
 							alien_alive[alien_index] = false
 							unordered_remove(&player_bullets, bullet_index)
 							num_aliens_alive -= 1
-							score += alien_stats[alien_index].w
+							score += alien.w
 							if num_aliens_alive == 0 {
 								difficulty = f32(int(1 + difficulty) % 11)
 								restart(difficulty)
