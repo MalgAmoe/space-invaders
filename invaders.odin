@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:math/rand"
 import rl "vendor:raylib"
 
+// Constants remain the same
 SCREEN_SIZE :: 800
 SCREEN_GRID_SIZE :: 320
 PLAYER_SIZE :: 10
@@ -31,16 +32,26 @@ BIG_ALIENS_POINTS :: 10
 SHIELD_Y_POS :: 250
 SHIELD_HEIGHT :: 20
 SHIELD_WIDTH :: 29
+SHIELD_IMPACT_RADIUS :: 4
 
+// Type definitions
 Shield :: struct {
 	position: rl.Vector2,
 	pixels:   [SHIELD_WIDTH][SHIELD_HEIGHT]bool,
+	bounds:   rl.Rectangle, // Added for faster bounds checking
 }
 
+Bullet :: struct {
+	position:         rl.Vector2,
+	size:             rl.Vector2,
+	is_player_bullet: bool,
+}
+
+// Single Game struct that contains all game state
 Game :: struct {
 	// Player variables
 	player_pos_x:       f32,
-	player_bullets:     [dynamic]rl.Vector2,
+	player_bullets:     [dynamic]Bullet, // Changed to Bullet struct
 	lifes_available:    int,
 
 	// Alien variables
@@ -50,7 +61,7 @@ Game :: struct {
 	alien_stats:        [ALIENS_NUM_X * ALIENS_NUM_Y]rl.Vector4,
 	last_alien_moved_x: int,
 	last_alien_moved_y: int,
-	alien_bullets:      [dynamic]rl.Vector2,
+	alien_bullets:      [dynamic]Bullet, // Changed to Bullet struct
 
 	// Shield variables
 	shields:            [4]Shield,
@@ -64,7 +75,7 @@ Game :: struct {
 	score:              f32,
 }
 
-// Function to create a shield (unchanged)
+// Function to create a shield (improved with bounds)
 create_shield :: proc(x, y: f32) -> Shield {
 	pixels: [SHIELD_WIDTH][SHIELD_HEIGHT]bool
 	end_part := SHIELD_HEIGHT / 6
@@ -95,7 +106,15 @@ create_shield :: proc(x, y: f32) -> Shield {
 		}
 	}
 
-	return Shield{position = {x, y}, pixels = pixels}
+	// Add bounds rectangle for faster collision checking
+	bounds := rl.Rectangle {
+		x      = x,
+		y      = y,
+		width  = SHIELD_WIDTH,
+		height = SHIELD_HEIGHT,
+	}
+
+	return Shield{position = {x, y}, pixels = pixels, bounds = bounds}
 }
 
 // Updated functions to use the Game struct
@@ -130,31 +149,33 @@ place_aliens :: proc(game: ^Game, difficulty_to_use: f32) {
 	game.last_alien_moved_y = -1
 }
 
+// Improved collision detection between alien and shield
 alien_over_shield :: proc(game: ^Game, alien: rl.Vector4, offset: int) {
 	if alien.y + alien.w > SHIELD_Y_POS {
+		alien_rect := rl.Rectangle {
+			x      = alien.x,
+			y      = alien.y - f32(offset),
+			width  = alien.z,
+			height = alien.z + f32(offset),
+		}
+
 		for &shield in game.shields {
-			if rl.CheckCollisionRecs(
-				{alien.x, alien.y, alien.w, alien.w},
-				{
-					shield.position.x,
-					shield.position.y,
-					shield.position.x + SHIELD_WIDTH,
-					shield.position.y + SHIELD_HEIGHT,
-				},
-			) {
-				for &column, column_index in shield.pixels {
-					for &pixel, row_index in column {
-						if pixel {
-							if rl.CheckCollisionPointRec(
-								{
-									shield.position.x + f32(column_index),
-									shield.position.y + f32(row_index),
-								},
-								{alien.x, alien.y - f32(offset), alien.z, alien.z + f32(offset)},
-							) {
-								pixel = false
-							}
-						}
+			// Quick bounds check first
+			if !rl.CheckCollisionRecs(alien_rect, shield.bounds) {
+				continue
+			}
+
+			// Only check pixels if bounds collide
+			for x in 0 ..< SHIELD_WIDTH {
+				for y in 0 ..< SHIELD_HEIGHT {
+					if !shield.pixels[x][y] {
+						continue
+					}
+
+					pixel_pos := rl.Vector2{shield.position.x + f32(x), shield.position.y + f32(y)}
+
+					if rl.CheckCollisionPointRec(pixel_pos, alien_rect) {
+						shield.pixels[x][y] = false
 					}
 				}
 			}
@@ -185,12 +206,17 @@ move_alien_vertically :: proc(game: ^Game) {
 	game.last_alien_moved_y -= 1
 }
 
+// Function to create a new bullet
+create_bullet :: proc(x, y: f32, is_player: bool) -> Bullet {
+	return Bullet{position = {x, y}, size = BULLET_SIZE, is_player_bullet = is_player}
+}
+
 delete_bullets :: proc(game: ^Game) {
 	if len(game.alien_bullets) > 0 {
 		remove_range(&game.alien_bullets, 0, len(game.alien_bullets))
 	}
 	if len(game.player_bullets) > 0 {
-		unordered_remove(&game.player_bullets, 0)
+		remove_range(&game.player_bullets, 0, len(game.player_bullets))
 	}
 }
 
@@ -207,12 +233,13 @@ restart :: proc(game: ^Game, difficulty_to_use: f32) {
 	}
 }
 
+// Create and initialize a new game
 init_game :: proc() -> Game {
 	game: Game
 
 	// Initialize dynamic arrays
-	game.player_bullets = make([dynamic]rl.Vector2)
-	game.alien_bullets = make([dynamic]rl.Vector2)
+	game.player_bullets = make([dynamic]Bullet)
+	game.alien_bullets = make([dynamic]Bullet)
 
 	// Set initial values
 	game.player_pos_x = f32(SCREEN_GRID_SIZE - PLAYER_SIZE) * 0.5
@@ -226,34 +253,221 @@ init_game :: proc() -> Game {
 	return game
 }
 
+// Helper function to handle shield damage
+// Helper function to handle shield damage with spherical blast pattern
 damage_shield :: proc(shield: ^Shield, x, y: int) {
-	shield.pixels[x][y] = false
-	if x > 0 {
-		shield.pixels[x - 1][y] = false
-		if y < SHIELD_HEIGHT - 1 {
-			shield.pixels[x - 1][y + 1] = false
+	// Apply spherical blast damage pattern
+	for dx in -SHIELD_IMPACT_RADIUS ..= SHIELD_IMPACT_RADIUS {
+		for dy in -SHIELD_IMPACT_RADIUS ..= SHIELD_IMPACT_RADIUS {
+			new_x := x + dx
+			new_y := y + dy
+
+			// Check if within shield bounds
+			if new_x >= 0 && new_x < SHIELD_WIDTH && new_y >= 0 && new_y < SHIELD_HEIGHT {
+				// Calculate distance from impact center (squared to avoid sqrt operation)
+				dist_sq := f32(dx * dx + dy * dy)
+
+				// Create spherical falloff pattern
+				if dist_sq <= SHIELD_IMPACT_RADIUS * SHIELD_IMPACT_RADIUS {
+					// Define inner radius for guaranteed damage (about 60% of total radius)
+					inner_radius_sq: f32 =
+						(SHIELD_IMPACT_RADIUS * 0.6) * (SHIELD_IMPACT_RADIUS * 0.6)
+
+					if dist_sq <= inner_radius_sq {
+						// Inner area - always damage these pixels
+						shield.pixels[new_x][new_y] = false
+					} else {
+						// Outer area - apply probability based on distance
+						damage_prob :=
+							1.0 -
+							((dist_sq - inner_radius_sq) /
+									(SHIELD_IMPACT_RADIUS * SHIELD_IMPACT_RADIUS -
+											inner_radius_sq))
+
+						// Apply randomized damage with distance-based probability
+						if rand.float32() < damage_prob {
+							shield.pixels[new_x][new_y] = false
+						}
+					}
+				}
+			}
 		}
 	}
-	if x - 1 > 0 {
-		shield.pixels[x - 2][y] = false
-		if y < SHIELD_HEIGHT - 1 {
-			shield.pixels[x - 2][y + 1] = false
+}
+
+// Get bullet rectangle for collision detection
+get_bullet_rect :: proc(bullet: Bullet) -> rl.Rectangle {
+	return rl.Rectangle {
+		x = bullet.position.x,
+		y = bullet.position.y,
+		width = bullet.size.x,
+		height = bullet.size.y,
+	}
+}
+
+// Centralized collision detection for bullets and shields
+check_bullet_shield_collision :: proc(bullet: Bullet, shield: ^Shield) -> bool {
+	bullet_rect := get_bullet_rect(bullet)
+
+	// Quick bounds check first
+	if !rl.CheckCollisionRecs(bullet_rect, shield.bounds) {
+		return false
+	}
+
+	// Only if bounds collide, check pixels
+	for y in 0 ..< SHIELD_HEIGHT {
+		for x in 0 ..< SHIELD_WIDTH {
+			if !shield.pixels[x][y] {
+				continue
+			}
+
+			pixel_pos := rl.Vector2{shield.position.x + f32(x), shield.position.y + f32(y)}
+
+			if rl.CheckCollisionPointRec(pixel_pos, bullet_rect) {
+				damage_shield(shield, x, y)
+				return true
+			}
 		}
 	}
-	if x < SHIELD_WIDTH - 1 {
-		shield.pixels[x + 1][y] = false
-		if y < SHIELD_HEIGHT - 1 {
-			shield.pixels[x + 1][y + 1] = false
+
+	return false
+}
+
+// Check collision between bullets
+check_bullet_collision :: proc(bullet1, bullet2: Bullet) -> bool {
+	rect1 := get_bullet_rect(bullet1)
+	rect2 := get_bullet_rect(bullet2)
+
+	return rl.CheckCollisionRecs(rect1, rect2)
+}
+
+// Check collision between bullet and alien
+check_bullet_alien_collision :: proc(bullet: Bullet, alien_stats: rl.Vector4) -> bool {
+	bullet_rect := get_bullet_rect(bullet)
+	alien_rect := rl.Rectangle {
+		x      = alien_stats.x,
+		y      = alien_stats.y,
+		width  = alien_stats.z,
+		height = alien_stats.z,
+	}
+
+	return rl.CheckCollisionRecs(bullet_rect, alien_rect)
+}
+
+// Check collision between bullet and player
+check_bullet_player_collision :: proc(bullet: Bullet, player_x: f32) -> bool {
+	bullet_rect := get_bullet_rect(bullet)
+	player_rect := rl.Rectangle {
+		x      = player_x,
+		y      = PLAYER_POS_Y,
+		width  = PLAYER_SIZE,
+		height = PLAYER_SIZE,
+	}
+
+	return rl.CheckCollisionRecs(bullet_rect, player_rect)
+}
+
+// Update bullets
+update_bullets :: proc(game: ^Game, dt: f32) {
+	// Update player bullets
+	for i := len(game.player_bullets) - 1; i >= 0; i -= 1 {
+		bullet := &game.player_bullets[i]
+
+		// Move bullet
+		bullet.position.y -= BULLET_SPEED * dt
+
+		// Check if bullet went off screen
+		if bullet.position.y < -bullet.size.y {
+			unordered_remove(&game.player_bullets, i)
+			continue
+		}
+
+		// Check collision with shields
+		had_shield_collision := false
+		for &shield in game.shields {
+			if check_bullet_shield_collision(game.player_bullets[i], &shield) {
+				unordered_remove(&game.player_bullets, i)
+				had_shield_collision = true
+				break
+			}
+		}
+		if had_shield_collision {
+			continue
+		}
+
+		// Check collision with aliens
+		for alien_stat, alien_index in game.alien_stats {
+			if !game.alien_alive[alien_index] {
+				continue
+			}
+
+			if check_bullet_alien_collision(game.player_bullets[i], alien_stat) {
+				game.alien_alive[alien_index] = false
+				unordered_remove(&game.player_bullets, i)
+				game.num_aliens_alive -= 1
+				game.score += alien_stat.w
+
+				if game.num_aliens_alive == 0 {
+					game.difficulty = f32(int(1 + game.difficulty) % 11)
+					restart(game, game.difficulty)
+				}
+				break
+			}
 		}
 	}
-	if x < SHIELD_WIDTH - 2 {
-		shield.pixels[x + 2][y] = false
-		if y < SHIELD_HEIGHT - 1 {
-			shield.pixels[x + 2][y + 1] = false
+
+	// Update alien bullets
+	for i := len(game.alien_bullets) - 1; i >= 0; i -= 1 {
+		bullet := &game.alien_bullets[i]
+
+		// Move bullet
+		bullet.position.y += ALIEN_BULLET_SPEED * dt
+
+		// Check if bullet went off screen
+		if bullet.position.y > SCREEN_GRID_SIZE {
+			unordered_remove(&game.alien_bullets, i)
+			continue
+		}
+
+		// Check collision with player bullets
+		for j := len(game.player_bullets) - 1; j >= 0; j -= 1 {
+			if check_bullet_collision(game.alien_bullets[i], game.player_bullets[j]) {
+				if i < len(game.alien_bullets) { 	// Make sure index is still valid
+					unordered_remove(&game.alien_bullets, i)
+				}
+				unordered_remove(&game.player_bullets, j)
+				break
+			}
+		}
+
+		// Skip if bullet was removed in collision with player bullet
+		if i >= len(game.alien_bullets) {
+			continue
+		}
+
+		// Check collision with shields
+		had_shield_collision := false
+		for &shield in game.shields {
+			if check_bullet_shield_collision(game.alien_bullets[i], &shield) {
+				unordered_remove(&game.alien_bullets, i)
+				had_shield_collision = true
+				break
+			}
+		}
+		if had_shield_collision {
+			continue
+		}
+
+		// Check collision with player
+		if check_bullet_player_collision(game.alien_bullets[i], game.player_pos_x) {
+			game.lifes_available -= 1
+			unordered_remove(&game.alien_bullets, i)
+
+			if game.lifes_available < 1 {
+				game.game_over = true
+			}
 		}
 	}
-	if y < SHIELD_HEIGHT - 1 do shield.pixels[x][y + 1] = false
-	if y < SHIELD_HEIGHT - 2 do shield.pixels[x][y + 2] = false
 }
 
 main :: proc() {
@@ -304,41 +518,32 @@ main :: proc() {
 
 			if rl.IsKeyPressed(.SPACE) {
 				if len(game.player_bullets) < 1 {
-					append(
-						&game.player_bullets,
-						rl.Vector2 {
-							game.player_pos_x + (PLAYER_SIZE - BULLET_SIZE.x) * 0.5,
-							PLAYER_POS_Y - BULLET_SIZE.y,
-						},
+					new_bullet := create_bullet(
+						game.player_pos_x + (PLAYER_SIZE - BULLET_SIZE.x) * 0.5,
+						PLAYER_POS_Y - BULLET_SIZE.y,
+						true,
 					)
+					append(&game.player_bullets, new_bullet)
 				}
 			}
 
 			// update
 			for game.accumulated_time >= dt {
+				// Update player position
 				game.player_pos_x += player_move_velocity * dt
 				game.player_pos_x = clamp(game.player_pos_x, 0, SCREEN_GRID_SIZE - PLAYER_SIZE)
 
-				for &bullet, index in game.player_bullets {
-					bullet.y -= BULLET_SPEED * dt
-					if bullet.y < -BULLET_SIZE.y {
-						unordered_remove(&game.player_bullets, index)
-					}
-				}
+				// Update all bullets with the new centralized function
+				update_bullets(&game, dt)
 
-				for &bullet, index in game.alien_bullets {
-					bullet.y += ALIEN_BULLET_SPEED * dt
-					if bullet.y > SCREEN_GRID_SIZE {
-						unordered_remove(&game.alien_bullets, index)
-					}
-				}
-
+				// Move aliens
 				move_alien_horizontally(&game)
 
 				if game.last_alien_moved_y >= 0 {
 					move_alien_vertically(&game)
 				}
 
+				// Alien shooting logic
 				if game.accumulated_time2 > 0 {
 					game.accumulated_time2 -= dt
 				} else {
@@ -357,19 +562,20 @@ main :: proc() {
 						is_alive := game.alien_alive[alien_index]
 						if is_alive {
 							alien_to_fire = game.alien_stats[alien_index]
-							append(
-								&game.alien_bullets,
-								rl.Vector2 {
-									alien_to_fire.x + alien_to_fire.z / 2,
-									alien_to_fire.y + alien_to_fire.z,
-								},
+							new_bullet := create_bullet(
+								alien_to_fire.x + alien_to_fire.z / 2,
+								alien_to_fire.y + alien_to_fire.z,
+								false,
 							)
+							append(&game.alien_bullets, new_bullet)
+
 							random_time := rand.float32()
 							game.accumulated_time2 = random_time + 0.2
 						}
 					}
 				}
 
+				// Check if aliens reached an edge or the player
 				if game.last_alien_moved_x == len(game.alien_stats) - 1 {
 					for alien, index in game.alien_stats {
 						if game.alien_alive[index] {
@@ -383,102 +589,6 @@ main :: proc() {
 							game.game_over = true
 						}
 					}
-				}
-
-				bullets_loop: for bullet, bullet_index in game.player_bullets {
-					bullet_rect := rl.Rectangle{bullet.x, bullet.y, BULLET_SIZE.x, BULLET_SIZE.y}
-					for &shield in game.shields {
-						for y in 0 ..< SHIELD_HEIGHT {
-							had_collision: bool
-							for x in 0 ..< SHIELD_WIDTH {
-								if shield.pixels[x][y] {
-									if rl.CheckCollisionPointRec(
-										{shield.position.x + f32(x), shield.position.y + f32(y)},
-										bullet_rect,
-									) {
-										damage_shield(&shield, x, y)
-										had_collision = true
-									}
-								}
-							}
-							if had_collision {
-								unordered_remove(&game.player_bullets, bullet_index)
-								break bullets_loop
-							}
-						}
-					}
-
-					for alien, alien_index in game.alien_stats {
-						alien_stats_rect := rl.Rectangle{alien.x, alien.y, alien.z, alien.z}
-
-						if rl.CheckCollisionRecs(alien_stats_rect, bullet_rect) &&
-						   game.alien_alive[alien_index] {
-							game.alien_alive[alien_index] = false
-							unordered_remove(&game.player_bullets, bullet_index)
-							game.num_aliens_alive -= 1
-							game.score += alien.w
-							if game.num_aliens_alive == 0 {
-								game.difficulty = f32(int(1 + game.difficulty) % 11)
-								restart(&game, game.difficulty)
-								break bullets_loop
-							}
-						}
-					}
-				}
-
-				alien_bullet_loop: for bullet, index in game.alien_bullets {
-					alien_bullet_rect := rl.Rectangle {
-						bullet.x,
-						bullet.y,
-						BULLET_SIZE.x,
-						BULLET_SIZE.y,
-					}
-					if len(game.player_bullets) == 1 {
-						if rl.CheckCollisionRecs(
-							{
-								game.player_bullets[0].x,
-								game.player_bullets[0].y,
-								BULLET_SIZE.x,
-								BULLET_SIZE.y,
-							},
-							alien_bullet_rect,
-						) {
-							unordered_remove(&game.alien_bullets, index)
-							unordered_remove(&game.player_bullets, 0)
-							break alien_bullet_loop
-						}
-					}
-					for &shield in game.shields {
-						for y in 0 ..< SHIELD_HEIGHT {
-							had_collision: bool
-							for x in 0 ..< SHIELD_WIDTH {
-								if shield.pixels[x][y] {
-									if rl.CheckCollisionPointRec(
-										{shield.position.x + f32(x), shield.position.y + f32(y)},
-										alien_bullet_rect,
-									) {
-										damage_shield(&shield, x, y)
-										had_collision = true
-									}
-								}
-							}
-							if had_collision {
-								unordered_remove(&game.alien_bullets, index)
-								break alien_bullet_loop
-							}
-						}
-					}
-					if rl.CheckCollisionRecs(
-						{game.player_pos_x, PLAYER_POS_Y, PLAYER_SIZE, PLAYER_SIZE},
-						alien_bullet_rect,
-					) {
-						game.lifes_available -= 1
-						unordered_remove(&game.alien_bullets, index)
-					}
-				}
-
-				if game.lifes_available < 1 {
-					game.game_over = true
 				}
 
 				game.accumulated_time -= dt
@@ -517,11 +627,11 @@ main :: proc() {
 			rl.DrawRectangleRec(player, rl.MAGENTA)
 
 			for bullet in game.player_bullets {
-				rl.DrawRectangleV({bullet.x, bullet.y}, BULLET_SIZE, rl.YELLOW)
+				rl.DrawRectangleV(bullet.position, bullet.size, rl.YELLOW)
 			}
 
 			for bullet in game.alien_bullets {
-				rl.DrawRectangleV({bullet.x, bullet.y}, BULLET_SIZE, rl.GREEN)
+				rl.DrawRectangleV(bullet.position, bullet.size, rl.GREEN)
 			}
 
 			for alien_number in 0 ..< ALIENS_NUM_X * ALIENS_NUM_Y {
