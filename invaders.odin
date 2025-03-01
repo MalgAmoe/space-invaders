@@ -32,32 +32,39 @@ SHIELD_Y_POS :: 250
 SHIELD_HEIGHT :: 20
 SHIELD_WIDTH :: 29
 
-player_pos_x: f32
-player_bullets: [dynamic]rl.Vector2
-
-time: f32
-accumulated_time: f32
-accumulated_time2: f32
-game_over: bool
-difficulty: f32
-score: f32
-lifes_available: int
-
-alien_direction: int
-num_aliens_alive: int
-alien_alive: [ALIENS_NUM_X * ALIENS_NUM_Y]bool
-alien_stats: [ALIENS_NUM_X * ALIENS_NUM_Y]rl.Vector4
-last_alien_moved_x: int
-last_alien_moved_y: int
-alien_bullets: [dynamic]rl.Vector2
-
-shields: [4]Shield
-
 Shield :: struct {
 	position: rl.Vector2,
 	pixels:   [SHIELD_WIDTH][SHIELD_HEIGHT]bool,
 }
 
+Game :: struct {
+	// Player variables
+	player_pos_x:       f32,
+	player_bullets:     [dynamic]rl.Vector2,
+	lifes_available:    int,
+
+	// Alien variables
+	alien_direction:    int,
+	num_aliens_alive:   int,
+	alien_alive:        [ALIENS_NUM_X * ALIENS_NUM_Y]bool,
+	alien_stats:        [ALIENS_NUM_X * ALIENS_NUM_Y]rl.Vector4,
+	last_alien_moved_x: int,
+	last_alien_moved_y: int,
+	alien_bullets:      [dynamic]rl.Vector2,
+
+	// Shield variables
+	shields:            [4]Shield,
+
+	// Game state variables
+	time:               f32,
+	accumulated_time:   f32,
+	accumulated_time2:  f32,
+	game_over:          bool,
+	difficulty:         f32,
+	score:              f32,
+}
+
+// Function to create a shield (unchanged)
 create_shield :: proc(x, y: f32) -> Shield {
 	pixels: [SHIELD_WIDTH][SHIELD_HEIGHT]bool
 	end_part := SHIELD_HEIGHT / 6
@@ -91,11 +98,12 @@ create_shield :: proc(x, y: f32) -> Shield {
 	return Shield{position = {x, y}, pixels = pixels}
 }
 
-place_aliens :: proc(difficulty_to_use: f32) {
+// Updated functions to use the Game struct
+place_aliens :: proc(game: ^Game, difficulty_to_use: f32) {
 	start_y := (SCREEN_GRID_SIZE - ALIENS_BLOCK_HEIGHT) * 0.3 + difficulty_to_use * 10
 
 	for alien in 0 ..< ALIENS_NUM_X * ALIENS_NUM_Y {
-		alien_alive[alien] = true
+		game.alien_alive[alien] = true
 		row := int(alien / ALIENS_NUM_X)
 		y: f32 = start_y + f32(row) * (ALIENS_SPACING + ALIEN_SIZE)
 
@@ -115,16 +123,16 @@ place_aliens :: proc(difficulty_to_use: f32) {
 
 		x: f32 = (ALIENS_BLOCK_WIDTH - 16) * 0.5 - width * 0.5 + f32(alien % ALIENS_NUM_X) * 16
 
-		alien_stats[alien] = {x, y, width, points}
+		game.alien_stats[alien] = {x, y, width, points}
 	}
-	num_aliens_alive = ALIENS_NUM_X * ALIENS_NUM_Y
-	last_alien_moved_x = num_aliens_alive - 1
-	last_alien_moved_y = -1
+	game.num_aliens_alive = ALIENS_NUM_X * ALIENS_NUM_Y
+	game.last_alien_moved_x = game.num_aliens_alive - 1
+	game.last_alien_moved_y = -1
 }
 
-alien_over_shield :: proc(alien: rl.Vector4, offset: int) {
+alien_over_shield :: proc(game: ^Game, alien: rl.Vector4, offset: int) {
 	if alien.y + alien.w > SHIELD_Y_POS {
-		for &shield in shields {
+		for &shield in game.shields {
 			if rl.CheckCollisionRecs(
 				{alien.x, alien.y, alien.w, alien.w},
 				{
@@ -154,48 +162,98 @@ alien_over_shield :: proc(alien: rl.Vector4, offset: int) {
 	}
 }
 
-move_alien_horizontally :: proc() {
-	if alien_alive[last_alien_moved_x] {
-		alien_stats[last_alien_moved_x].x =
-			f32(alien_direction * 2) + alien_stats[last_alien_moved_x].x
+move_alien_horizontally :: proc(game: ^Game) {
+	if game.alien_alive[game.last_alien_moved_x] {
+		game.alien_stats[game.last_alien_moved_x].x =
+			f32(game.alien_direction * 2) + game.alien_stats[game.last_alien_moved_x].x
 
-		alien := alien_stats[last_alien_moved_x]
-		alien_over_shield(alien, 0)
+		alien := game.alien_stats[game.last_alien_moved_x]
+		alien_over_shield(game, alien, 0)
 	}
-	last_alien_moved_x = last_alien_moved_x > 0 ? last_alien_moved_x - 1 : len(alien_stats) - 1
+	game.last_alien_moved_x =
+		game.last_alien_moved_x > 0 ? game.last_alien_moved_x - 1 : len(game.alien_stats) - 1
 }
 
-move_alien_vertically :: proc() {
-	if alien_alive[last_alien_moved_y] {
-		alien_stats[last_alien_moved_y].y =
-			alien_stats[last_alien_moved_y].y + ALIEN_SIZE + ALIENS_SPACING
+move_alien_vertically :: proc(game: ^Game) {
+	if game.alien_alive[game.last_alien_moved_y] {
+		game.alien_stats[game.last_alien_moved_y].y =
+			game.alien_stats[game.last_alien_moved_y].y + ALIEN_SIZE + ALIENS_SPACING
 
-		alien := alien_stats[last_alien_moved_y]
-		alien_over_shield(alien, ALIENS_SPACING)
+		alien := game.alien_stats[game.last_alien_moved_y]
+		alien_over_shield(game, alien, ALIENS_SPACING)
 	}
-	last_alien_moved_y -= 1
+	game.last_alien_moved_y -= 1
 }
 
-delete_bullets :: proc() {
-	if len(alien_bullets) > 0 {
-		remove_range(&alien_bullets, 0, len(alien_bullets))
+delete_bullets :: proc(game: ^Game) {
+	if len(game.alien_bullets) > 0 {
+		remove_range(&game.alien_bullets, 0, len(game.alien_bullets))
 	}
-	if len(player_bullets) > 0 {
-		unordered_remove(&player_bullets, 0)
+	if len(game.player_bullets) > 0 {
+		unordered_remove(&game.player_bullets, 0)
 	}
 }
 
-restart :: proc(difficulty_to_use: f32) {
-	delete_bullets()
-	player_pos_x = f32(SCREEN_GRID_SIZE - PLAYER_SIZE) * 0.5
-	alien_direction = 1
-	place_aliens(difficulty_to_use)
-	for &shield, i in shields {
+restart :: proc(game: ^Game, difficulty_to_use: f32) {
+	delete_bullets(game)
+	game.player_pos_x = f32(SCREEN_GRID_SIZE - PLAYER_SIZE) * 0.5
+	game.alien_direction = 1
+	place_aliens(game, difficulty_to_use)
+	for &shield, i in game.shields {
 		shield = create_shield(
 			2 * f32(i + 1) * SCREEN_GRID_SIZE / 10 - SHIELD_WIDTH / 2,
 			SHIELD_Y_POS,
 		)
 	}
+}
+
+init_game :: proc() -> Game {
+	game: Game
+
+	// Initialize dynamic arrays
+	game.player_bullets = make([dynamic]rl.Vector2)
+	game.alien_bullets = make([dynamic]rl.Vector2)
+
+	// Set initial values
+	game.player_pos_x = f32(SCREEN_GRID_SIZE - PLAYER_SIZE) * 0.5
+	game.lifes_available = 3
+	game.difficulty = 1
+	game.alien_direction = 1
+
+	// Initialize the game state
+	restart(&game, game.difficulty)
+
+	return game
+}
+
+damage_shield :: proc(shield: ^Shield, x, y: int) {
+	shield.pixels[x][y] = false
+	if x > 0 {
+		shield.pixels[x - 1][y] = false
+		if y < SHIELD_HEIGHT - 1 {
+			shield.pixels[x - 1][y + 1] = false
+		}
+	}
+	if x - 1 > 0 {
+		shield.pixels[x - 2][y] = false
+		if y < SHIELD_HEIGHT - 1 {
+			shield.pixels[x - 2][y + 1] = false
+		}
+	}
+	if x < SHIELD_WIDTH - 1 {
+		shield.pixels[x + 1][y] = false
+		if y < SHIELD_HEIGHT - 1 {
+			shield.pixels[x + 1][y + 1] = false
+		}
+	}
+	if x < SHIELD_WIDTH - 2 {
+		shield.pixels[x + 2][y] = false
+		if y < SHIELD_HEIGHT - 1 {
+			shield.pixels[x + 2][y + 1] = false
+		}
+	}
+	if y < SHIELD_HEIGHT - 1 do shield.pixels[x][y + 1] = false
+	if y < SHIELD_HEIGHT - 2 do shield.pixels[x][y + 2] = false
 }
 
 main :: proc() {
@@ -205,13 +263,12 @@ main :: proc() {
 
 	rl.SetTargetFPS(200)
 
-	// setup starting state
-	player_pos_x = f32(SCREEN_GRID_SIZE - PLAYER_SIZE) * 0.5
-
-	difficulty = 1
-	lifes_available = 3
-
-	restart(difficulty)
+	// Initialize the game state
+	game := init_game()
+	defer {
+		delete(game.player_bullets) // Clean up dynamic arrays
+		delete(game.alien_bullets)
+	}
 
 	// kinda crt shader
 	target_texture := rl.LoadRenderTexture(SCREEN_GRID_SIZE, SCREEN_GRID_SIZE)
@@ -228,14 +285,14 @@ main :: proc() {
 	rl.SetShaderValue(crt_shader, curvature_loc, &curvature, .FLOAT)
 
 	for !rl.WindowShouldClose() {
-		dt := f32(num_aliens_alive) / (difficulty * 500 + 4000)
+		dt := f32(game.num_aliens_alive) / (game.difficulty * 500 + 4000)
 		time_elapsed := rl.GetTime()
 
 		rl.SetShaderValue(crt_shader, i_time_loc, &time_elapsed, .FLOAT)
 
 		// update state
-		if !game_over {
-			accumulated_time += rl.GetFrameTime()
+		if !game.game_over {
+			game.accumulated_time += rl.GetFrameTime()
 
 			player_move_velocity: f32
 			if rl.IsKeyDown(.LEFT) {
@@ -246,11 +303,11 @@ main :: proc() {
 			}
 
 			if rl.IsKeyPressed(.SPACE) {
-				if len(player_bullets) < 1 {
+				if len(game.player_bullets) < 1 {
 					append(
-						&player_bullets,
+						&game.player_bullets,
 						rl.Vector2 {
-							player_pos_x + (PLAYER_SIZE - BULLET_SIZE.x) * 0.5,
+							game.player_pos_x + (PLAYER_SIZE - BULLET_SIZE.x) * 0.5,
 							PLAYER_POS_Y - BULLET_SIZE.y,
 						},
 					)
@@ -258,38 +315,38 @@ main :: proc() {
 			}
 
 			// update
-			for accumulated_time >= dt {
-				player_pos_x += player_move_velocity * dt
-				player_pos_x = clamp(player_pos_x, 0, SCREEN_GRID_SIZE - PLAYER_SIZE)
+			for game.accumulated_time >= dt {
+				game.player_pos_x += player_move_velocity * dt
+				game.player_pos_x = clamp(game.player_pos_x, 0, SCREEN_GRID_SIZE - PLAYER_SIZE)
 
-				for &bullet, index in player_bullets {
+				for &bullet, index in game.player_bullets {
 					bullet.y -= BULLET_SPEED * dt
 					if bullet.y < -BULLET_SIZE.y {
-						unordered_remove(&player_bullets, index)
+						unordered_remove(&game.player_bullets, index)
 					}
 				}
 
-				for &bullet, index in alien_bullets {
+				for &bullet, index in game.alien_bullets {
 					bullet.y += ALIEN_BULLET_SPEED * dt
 					if bullet.y > SCREEN_GRID_SIZE {
-						unordered_remove(&alien_bullets, index)
+						unordered_remove(&game.alien_bullets, index)
 					}
 				}
 
-				move_alien_horizontally()
+				move_alien_horizontally(&game)
 
-				if last_alien_moved_y >= 0 {
-					move_alien_vertically()
+				if game.last_alien_moved_y >= 0 {
+					move_alien_vertically(&game)
 				}
 
-				if accumulated_time2 > 0 {
-					accumulated_time2 -= dt
+				if game.accumulated_time2 > 0 {
+					game.accumulated_time2 -= dt
 				} else {
-					if len(alien_bullets) < 3 {
-						random_alien_to_count := rand.int_max(num_aliens_alive + 1)
+					if len(game.alien_bullets) < 3 {
+						random_alien_to_count := rand.int_max(game.num_aliens_alive + 1)
 						alien_to_fire: rl.Vector4
 						alien_index: int
-						for is_alive, index in alien_alive {
+						for is_alive, index in game.alien_alive {
 							if is_alive do random_alien_to_count -= 1
 							if random_alien_to_count == 0 {
 								alien_index = index
@@ -297,40 +354,40 @@ main :: proc() {
 							}
 						}
 
-						is_alive := alien_alive[alien_index]
+						is_alive := game.alien_alive[alien_index]
 						if is_alive {
-							alien_to_fire = alien_stats[alien_index]
+							alien_to_fire = game.alien_stats[alien_index]
 							append(
-								&alien_bullets,
+								&game.alien_bullets,
 								rl.Vector2 {
 									alien_to_fire.x + alien_to_fire.z / 2,
 									alien_to_fire.y + alien_to_fire.z,
 								},
 							)
 							random_time := rand.float32()
-							accumulated_time2 = random_time + 0.2
+							game.accumulated_time2 = random_time + 0.2
 						}
 					}
 				}
 
-				if last_alien_moved_x == len(alien_stats) - 1 {
-					for alien, index in alien_stats {
-						if alien_alive[index] {
+				if game.last_alien_moved_x == len(game.alien_stats) - 1 {
+					for alien, index in game.alien_stats {
+						if game.alien_alive[index] {
 							if alien.x < 10 || alien.x > SCREEN_GRID_SIZE - ALIEN_SIZE - 10 {
-								alien_direction *= -1
-								last_alien_moved_y = len(alien_stats) - 1
+								game.alien_direction *= -1
+								game.last_alien_moved_y = len(game.alien_stats) - 1
 								break
 							}
 						}
 						if alien.y > PLAYER_POS_Y {
-							game_over = true
+							game.game_over = true
 						}
 					}
 				}
 
-				bullets_loop: for bullet, bullet_index in player_bullets {
+				bullets_loop: for bullet, bullet_index in game.player_bullets {
 					bullet_rect := rl.Rectangle{bullet.x, bullet.y, BULLET_SIZE.x, BULLET_SIZE.y}
-					for &shield in shields {
+					for &shield in game.shields {
 						for y in 0 ..< SHIELD_HEIGHT {
 							had_collision: bool
 							for x in 0 ..< SHIELD_WIDTH {
@@ -339,85 +396,59 @@ main :: proc() {
 										{shield.position.x + f32(x), shield.position.y + f32(y)},
 										bullet_rect,
 									) {
-										shield.pixels[x][y] = false
-										if x > 0 {
-											shield.pixels[x - 1][y] = false
-											if y < SHIELD_HEIGHT - 1 {
-												shield.pixels[x - 1][y + 1] = false
-											}
-										}
-										if x - 1 > 0 {
-											shield.pixels[x - 2][y] = false
-											if y < SHIELD_HEIGHT - 1 {
-												shield.pixels[x - 2][y + 1] = false
-											}
-										}
-										if x < SHIELD_WIDTH - 1 {
-											shield.pixels[x + 1][y] = false
-											if y < SHIELD_HEIGHT - 1 {
-												shield.pixels[x + 1][y + 1] = false
-											}
-										}
-										if x < SHIELD_WIDTH - 2 {
-											shield.pixels[x + 2][y] = false
-											if y < SHIELD_HEIGHT - 1 {
-												shield.pixels[x + 2][y + 1] = false
-											}
-										}
-										if y < SHIELD_HEIGHT - 1 do shield.pixels[x][y + 1] = false
-										if y < SHIELD_HEIGHT - 2 do shield.pixels[x][y + 2] = false
+										damage_shield(&shield, x, y)
 										had_collision = true
 									}
 								}
 							}
 							if had_collision {
-								unordered_remove(&player_bullets, bullet_index)
+								unordered_remove(&game.player_bullets, bullet_index)
 								break bullets_loop
 							}
 						}
 					}
 
-					for alien, alien_index in alien_stats {
+					for alien, alien_index in game.alien_stats {
 						alien_stats_rect := rl.Rectangle{alien.x, alien.y, alien.z, alien.z}
 
 						if rl.CheckCollisionRecs(alien_stats_rect, bullet_rect) &&
-						   alien_alive[alien_index] {
-							alien_alive[alien_index] = false
-							unordered_remove(&player_bullets, bullet_index)
-							num_aliens_alive -= 1
-							score += alien.w
-							if num_aliens_alive == 0 {
-								difficulty = f32(int(1 + difficulty) % 11)
-								restart(difficulty)
+						   game.alien_alive[alien_index] {
+							game.alien_alive[alien_index] = false
+							unordered_remove(&game.player_bullets, bullet_index)
+							game.num_aliens_alive -= 1
+							game.score += alien.w
+							if game.num_aliens_alive == 0 {
+								game.difficulty = f32(int(1 + game.difficulty) % 11)
+								restart(&game, game.difficulty)
 								break bullets_loop
 							}
 						}
 					}
 				}
 
-				alien_bullet_loop: for bullet, index in alien_bullets {
+				alien_bullet_loop: for bullet, index in game.alien_bullets {
 					alien_bullet_rect := rl.Rectangle {
 						bullet.x,
 						bullet.y,
 						BULLET_SIZE.x,
 						BULLET_SIZE.y,
 					}
-					if len(player_bullets) == 1 {
+					if len(game.player_bullets) == 1 {
 						if rl.CheckCollisionRecs(
 							{
-								player_bullets[0].x,
-								player_bullets[0].y,
+								game.player_bullets[0].x,
+								game.player_bullets[0].y,
 								BULLET_SIZE.x,
 								BULLET_SIZE.y,
 							},
 							alien_bullet_rect,
 						) {
-							unordered_remove(&alien_bullets, index)
-							unordered_remove(&player_bullets, 0)
+							unordered_remove(&game.alien_bullets, index)
+							unordered_remove(&game.player_bullets, 0)
 							break alien_bullet_loop
 						}
 					}
-					for &shield in shields {
+					for &shield in game.shields {
 						for y in 0 ..< SHIELD_HEIGHT {
 							had_collision: bool
 							for x in 0 ..< SHIELD_WIDTH {
@@ -426,71 +457,41 @@ main :: proc() {
 										{shield.position.x + f32(x), shield.position.y + f32(y)},
 										alien_bullet_rect,
 									) {
-										shield.pixels[x][y] = false
-										if x > 0 {
-											shield.pixels[x - 1][y] = false
-											if y < SHIELD_HEIGHT - 1 {
-												shield.pixels[x - 1][y + 1] = false
-											} else if y < SHIELD_HEIGHT - 2 {
-												shield.pixels[x - 1][y + 2] = false
-											}
-										}
-										if x - 1 > 0 {
-											shield.pixels[x - 2][y] = false
-											if y < SHIELD_HEIGHT - 1 {
-												shield.pixels[x - 2][y + 1] = false
-											}
-										}
-										if x < SHIELD_WIDTH - 1 {
-											shield.pixels[x + 1][y] = false
-											if y < SHIELD_HEIGHT - 1 {
-												shield.pixels[x + 1][y + 1] = false
-											} else if y < SHIELD_HEIGHT - 2 {
-												shield.pixels[x + 1][y + 2] = false
-											}
-										}
-										if x < SHIELD_WIDTH - 2 {
-											shield.pixels[x + 2][y] = false
-											if y < SHIELD_HEIGHT - 1 {
-												shield.pixels[x + 2][y + 1] = false
-											}
-										}
-										if y < SHIELD_HEIGHT - 1 do shield.pixels[x][y + 1] = false
-										if y < SHIELD_HEIGHT - 2 do shield.pixels[x][y + 2] = false
+										damage_shield(&shield, x, y)
 										had_collision = true
 									}
 								}
 							}
 							if had_collision {
-								unordered_remove(&alien_bullets, index)
+								unordered_remove(&game.alien_bullets, index)
 								break alien_bullet_loop
 							}
 						}
 					}
 					if rl.CheckCollisionRecs(
-						{player_pos_x, PLAYER_POS_Y, PLAYER_SIZE, PLAYER_SIZE},
+						{game.player_pos_x, PLAYER_POS_Y, PLAYER_SIZE, PLAYER_SIZE},
 						alien_bullet_rect,
 					) {
-						lifes_available -= 1
-						unordered_remove(&alien_bullets, index)
+						game.lifes_available -= 1
+						unordered_remove(&game.alien_bullets, index)
 					}
 				}
 
-				if lifes_available < 1 {
-					game_over = true
+				if game.lifes_available < 1 {
+					game.game_over = true
 				}
 
-				accumulated_time -= dt
+				game.accumulated_time -= dt
 			}
 
 		} else {
 			if rl.IsKeyPressed(.SPACE) {
-				game_over = false
-				difficulty = 1
-				lifes_available = 3
-				score = 0
+				game.game_over = false
+				game.difficulty = 1
+				game.lifes_available = 3
+				game.score = 0
 
-				restart(difficulty)
+				restart(&game, game.difficulty)
 			}
 		}
 
@@ -504,38 +505,38 @@ main :: proc() {
 		rl.BeginMode2D(camera)
 		defer rl.EndMode2D()
 
-		if !game_over {
-			score_text := fmt.ctprint(score)
+		if !game.game_over {
+			score_text := fmt.ctprint(game.score)
 			rl.DrawText(score_text, 5, 5, 10, rl.WHITE)
 
-			lifes_text := fmt.ctprintf("Lifes available: %v", lifes_available)
+			lifes_text := fmt.ctprintf("Lifes available: %v", game.lifes_available)
 			lifes_text_size := rl.MeasureText(lifes_text, 10)
 			rl.DrawText(lifes_text, SCREEN_GRID_SIZE - lifes_text_size - 5, 5, 10, rl.WHITE)
 
-			player := rl.Rectangle{player_pos_x, PLAYER_POS_Y, PLAYER_SIZE, PLAYER_SIZE}
+			player := rl.Rectangle{game.player_pos_x, PLAYER_POS_Y, PLAYER_SIZE, PLAYER_SIZE}
 			rl.DrawRectangleRec(player, rl.MAGENTA)
 
-			for bullet in player_bullets {
+			for bullet in game.player_bullets {
 				rl.DrawRectangleV({bullet.x, bullet.y}, BULLET_SIZE, rl.YELLOW)
 			}
 
-			for bullet in alien_bullets {
+			for bullet in game.alien_bullets {
 				rl.DrawRectangleV({bullet.x, bullet.y}, BULLET_SIZE, rl.GREEN)
 			}
 
 			for alien_number in 0 ..< ALIENS_NUM_X * ALIENS_NUM_Y {
-				if alien_alive[alien_number] {
+				if game.alien_alive[alien_number] {
 					position_rect := rl.Rectangle {
-						alien_stats[alien_number].x,
-						alien_stats[alien_number].y,
-						alien_stats[alien_number].z,
-						alien_stats[alien_number].z,
+						game.alien_stats[alien_number].x,
+						game.alien_stats[alien_number].y,
+						game.alien_stats[alien_number].z,
+						game.alien_stats[alien_number].z,
 					}
 					rl.DrawRectangleRec(position_rect, rl.PINK)
 				}
 			}
 
-			for shield in shields {
+			for shield in game.shields {
 				for row, x in shield.pixels {
 					for pixel, y in row {
 						if pixel {
@@ -567,7 +568,7 @@ main :: proc() {
 				game_over_color,
 			)
 
-			score_over_text := fmt.ctprintf("Score: %v", score)
+			score_over_text := fmt.ctprintf("Score: %v", game.score)
 			score_over_font_size: i32 = 20
 			score_over_text_width := rl.MeasureText(score_over_text, score_over_font_size)
 			rl.DrawText(
