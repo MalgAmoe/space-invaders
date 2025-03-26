@@ -785,7 +785,7 @@ main :: proc() {
 				if game.alien_alive[alien_number] {
 					alien_stat := game.alien_stats[alien_number]
 					row := int(alien_number / ALIENS_NUM_X)
-					
+
 					frame_rect: rl.Rectangle
 					if row == 0 {
 						// Small alien (top row)
@@ -797,31 +797,24 @@ main :: proc() {
 						// Large alien (bottom rows)
 						frame_rect = sprites.large_frames[game.alien_current_frame]
 					}
-					
+
 					// Scale factor to match game dimensions
 					scale := 0.5 * ALIEN_SIZE / frame_rect.height
-					
+
 					// Calculate the centered position
 					draw_pos_x := alien_stat.x + (alien_stat.z - frame_rect.width * scale) * 0.5
 					draw_pos_y := alien_stat.y
-					
+
 					// Draw the alien sprite at its position with scaling
 					source_rec := frame_rect
-					dest_rec := rl.Rectangle{
-						x = draw_pos_x,
-						y = draw_pos_y,
-						width = alien_stat.z,
+					dest_rec := rl.Rectangle {
+						x      = draw_pos_x,
+						y      = draw_pos_y,
+						width  = alien_stat.z,
 						height = alien_stat.z,
 					}
-					
-					rl.DrawTexturePro(
-						sprites.texture,
-						source_rec,
-						dest_rec,
-						{0, 0},
-						0.0,
-						rl.WHITE
-					)
+
+					rl.DrawTexturePro(sprites.texture, source_rec, dest_rec, {0, 0}, 0.0, rl.WHITE)
 				}
 			}
 			for shield in game.shields {
@@ -880,7 +873,7 @@ main :: proc() {
 			)
 		}
 
-		rl.ClearBackground(rl.DARKPURPLE)
+		rl.ClearBackground(rl.BLACK)
 
 		rl.BeginShaderMode(crt_shader)
 		defer rl.EndShaderMode()
