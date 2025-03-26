@@ -880,6 +880,19 @@ main :: proc() {
 				}
 			}
 
+			for shield in game.shields {
+				for row, x in shield.pixels {
+					for pixel, y in row {
+						if pixel {
+							rl.DrawRectangleRec(
+								{shield.position.x + f32(x), shield.position.y + f32(y), 1, 1},
+								rl.PURPLE,
+							)
+						}
+					}
+				}
+			}
+
 			// Draw explosions
 			for explosion in game.explosions {
 				if explosion.active {
@@ -895,19 +908,6 @@ main :: proc() {
 					}
 
 					rl.DrawTexturePro(sprites.texture, frame_rect, dest_rec, {0, 0}, 0.0, rl.WHITE)
-				}
-			}
-
-			for shield in game.shields {
-				for row, x in shield.pixels {
-					for pixel, y in row {
-						if pixel {
-							rl.DrawRectangleRec(
-								{shield.position.x + f32(x), shield.position.y + f32(y), 1, 1},
-								rl.PURPLE,
-							)
-						}
-					}
 				}
 			}
 		} else {
