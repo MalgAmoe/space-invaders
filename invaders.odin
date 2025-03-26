@@ -263,7 +263,7 @@ move_alien_horizontally :: proc(game: ^Game) {
 move_alien_vertically :: proc(game: ^Game) {
 	if game.alien_alive[game.last_alien_moved_y] {
 		game.alien_stats[game.last_alien_moved_y].y =
-			game.alien_stats[game.last_alien_moved_y].y + ALIEN_SIZE + ALIENS_SPACING
+			game.alien_stats[game.last_alien_moved_y].y + ALIEN_SIZE
 
 		alien := game.alien_stats[game.last_alien_moved_y]
 		alien_over_shield(game, alien, ALIENS_SPACING)
@@ -434,14 +434,64 @@ check_bullet_alien_collision :: proc(bullet: Bullet, alien_stats: rl.Vector4) ->
 // Check collision between bullet and player
 check_bullet_player_collision :: proc(bullet: Bullet, player_x: f32) -> bool {
 	bullet_rect := get_bullet_rect(bullet)
+
+	// Use dimensions that match the player ship sprite (20×10)
 	player_rect := rl.Rectangle {
-		x      = player_x,
-		y      = PLAYER_POS_Y,
-		width  = PLAYER_SIZE,
-		height = PLAYER_SIZE,
+		// Center the player rectangle on the player position
+		x      = player_x - 5, // Adjust x to center the collision box
+		y      = PLAYER_POS_Y - 5, // Adjust y to align with the sprite
+		width  = 20, // Match the player ship sprite width
+		height = 10, // Match the player ship sprite height
 	}
 
-	return rl.CheckCollisionRecs(bullet_rect, player_rect)
+	// If we detect a basic rectangle collision first
+	if rl.CheckCollisionRecs(bullet_rect, player_rect) {
+		// Then do a more precise check considering the pyramid shape
+		// The player sprite is triangular/pyramid shaped, so we need additional logic
+		// to see if the bullet is actually hitting the visible part
+
+		// Calculate relative position of bullet within player rectangle
+		rel_x := bullet_rect.x - player_rect.x
+		rel_y := bullet_rect.y - player_rect.y
+
+		// Check if bullet overlaps with the pyramid shape
+		// The pyramid gets wider as y increases:
+		// - At the top (rel_y = 0), it's 2 pixels wide centered
+		// - At the middle (rel_y = 4), it's 12 pixels wide
+		// - At the bottom (rel_y = 8-10), it's the full 20 pixels wide
+
+		if rel_y >= 0 && rel_y < player_rect.height {
+			// Figure out the width of the pyramid at this y-coordinate
+			// Width increases as we go down (as y increases)
+			width_at_y: f32
+			if rel_y < 2 {
+				width_at_y = 2 // Top part (narrowest)
+			} else if rel_y < 4 {
+				width_at_y = 8 // Middle-top part
+			} else if rel_y < 6 {
+				width_at_y = 12 // Middle part
+			} else if rel_y < 8 {
+				width_at_y = 16 // Middle-bottom part
+			} else {
+				width_at_y = 20 // Bottom part (widest)
+			}
+
+			// Calculate x-range for pyramid at this y-level
+			left_edge := (player_rect.width - width_at_y) / 2
+			right_edge := left_edge + width_at_y
+
+			// Check if bullet's x position overlaps with pyramid at this y-level
+			// This checks if any part of the bullet overlaps with pyramid
+			bullet_right := rel_x + bullet_rect.width
+			if rel_x < right_edge && bullet_right > left_edge {
+				return true
+			}
+		}
+
+		return false // Bullet hit rectangle but missed the pyramid shape
+	}
+
+	return false // No rectangle collision
 }
 
 // Update explosions
