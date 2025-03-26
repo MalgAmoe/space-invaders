@@ -37,7 +37,7 @@ SHIELD_IMPACT_RADIUS :: 4
 // Animation constants
 ANIMATION_SPEED :: 0.5 // seconds per frame
 EXPLOSION_FRAMES :: 3
-EXPLOSION_DURATION :: 0.5 // seconds
+EXPLOSION_DURATION :: 0.25 // seconds
 
 // Type definitions
 Shield :: struct {
@@ -180,7 +180,7 @@ init_alien_sprites :: proc(spritesheet_path: cstring) -> AlienSprites {
 
 // Updated functions to use the Game struct
 place_aliens :: proc(game: ^Game, difficulty_to_use: f32) {
-	start_y := (SCREEN_GRID_SIZE - ALIENS_BLOCK_HEIGHT) * 0.3 + difficulty_to_use * 10
+	start_y := (SCREEN_GRID_SIZE - ALIENS_BLOCK_HEIGHT) * 0.2 + difficulty_to_use * 7
 
 	for alien in 0 ..< ALIENS_NUM_X * ALIENS_NUM_Y {
 		game.alien_alive[alien] = true
@@ -320,7 +320,7 @@ init_game :: proc() -> Game {
 	// Set initial values
 	game.player_pos_x = f32(SCREEN_GRID_SIZE - PLAYER_SIZE) * 0.5
 	game.lifes_available = 3
-	game.difficulty = 1
+	game.difficulty = 0
 	game.alien_direction = 1
 	game.alien_animation_timer = 0
 	game.alien_current_frame = 0
@@ -533,7 +533,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 			if check_bullet_shield_collision(game.player_bullets[i], &shield) {
 				// Add explosion at the collision point
 				bullet_pos := game.player_bullets[i].position
-				explosion := create_explosion(bullet_pos.x - 9, bullet_pos.y - 6) // Center explosion
+				explosion := create_explosion(bullet_pos.x - 9, bullet_pos.y - 4) // Center explosion
 				append(&game.explosions, explosion)
 
 				unordered_remove(&game.player_bullets, i)
@@ -555,7 +555,10 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 				game.alien_alive[alien_index] = false
 
 				// Create explosion at alien position
-				explosion := create_explosion(alien_stat.x, alien_stat.y)
+				explosion := create_explosion(
+					alien_stat.x - alien_stat.z * 0.5,
+					alien_stat.y - alien_stat.z * 0.25,
+				)
 				append(&game.explosions, explosion)
 
 				unordered_remove(&game.player_bullets, i)
@@ -589,7 +592,10 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 			if check_bullet_collision(game.alien_bullets[i], game.player_bullets[j]) {
 				// Create explosion at collision point
 				bullet_pos := game.alien_bullets[i].position
-				explosion := create_explosion(bullet_pos.x - 9, bullet_pos.y - 6)
+				explosion := create_explosion(
+					game.alien_bullets[i].position.x - game.alien_bullets[i].size.x * 4,
+					game.alien_bullets[i].position.y - game.alien_bullets[i].size.y,
+				)
 				append(&game.explosions, explosion)
 
 				if i < len(game.alien_bullets) { 	// Make sure index is still valid
@@ -610,8 +616,11 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 		for &shield in game.shields {
 			if check_bullet_shield_collision(game.alien_bullets[i], &shield) {
 				// Create explosion at collision point
-				bullet_pos := game.alien_bullets[i].position
-				explosion := create_explosion(bullet_pos.x - 9, bullet_pos.y - 6)
+				// bullet_pos := game.alien_bullets[i].position
+				explosion := create_explosion(
+					game.alien_bullets[i].position.x - game.alien_bullets[i].size.x * 4,
+					game.alien_bullets[i].position.y - game.alien_bullets[i].size.y,
+				)
 				append(&game.explosions, explosion)
 
 				unordered_remove(&game.alien_bullets, i)
@@ -628,7 +637,10 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 			game.lifes_available -= 1
 
 			// Create explosion at player position
-			explosion := create_explosion(game.player_pos_x, PLAYER_POS_Y)
+			explosion := create_explosion(
+				game.alien_bullets[i].position.x - game.alien_bullets[i].size.x * 4,
+				game.alien_bullets[i].position.y - game.alien_bullets[i].size.y,
+			)
 			append(&game.explosions, explosion)
 
 			unordered_remove(&game.alien_bullets, i)
@@ -867,6 +879,25 @@ main :: proc() {
 					rl.DrawTexturePro(sprites.texture, source_rec, dest_rec, {0, 0}, 0.0, rl.WHITE)
 				}
 			}
+
+			// Draw explosions
+			for explosion in game.explosions {
+				if explosion.active {
+					// Use the appropriate explosion frame from the spritesheet
+					frame_rect := sprites.explosion_frames[explosion.frame]
+
+					// Draw the explosion at its position
+					dest_rec := rl.Rectangle {
+						x      = explosion.position.x,
+						y      = explosion.position.y,
+						width  = frame_rect.width,
+						height = frame_rect.height,
+					}
+
+					rl.DrawTexturePro(sprites.texture, frame_rect, dest_rec, {0, 0}, 0.0, rl.WHITE)
+				}
+			}
+
 			for shield in game.shields {
 				for row, x in shield.pixels {
 					for pixel, y in row {
@@ -923,7 +954,16 @@ main :: proc() {
 			)
 		}
 
-		rl.ClearBackground(rl.BLACK)
+		rl.ClearBackground(
+			rl.Color(
+				{
+					u8((game.difficulty) * 13),
+					u8((game.difficulty) * 8),
+					u8((game.difficulty) * 21),
+					1,
+				},
+			),
+		)
 
 		rl.BeginShaderMode(crt_shader)
 		defer rl.EndShaderMode()
