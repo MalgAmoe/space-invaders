@@ -734,7 +734,7 @@ main :: proc() {
 			for game.accumulated_time >= dt {
 				// Update player position
 				game.player_pos_x += player_move_velocity * dt
-				game.player_pos_x = clamp(game.player_pos_x, 0, SCREEN_GRID_SIZE - PLAYER_SIZE)
+				game.player_pos_x = clamp(game.player_pos_x, 5, SCREEN_GRID_SIZE - PLAYER_SIZE - 5)
 
 				// Update all bullets with the new centralized function
 				update_bullets(&game, dt)
