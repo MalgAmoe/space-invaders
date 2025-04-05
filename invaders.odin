@@ -90,6 +90,7 @@ Game :: struct {
 	game_over:             bool,
 	difficulty:            f32,
 	score:                 f32,
+	round_total_shots:     u8,
 }
 
 // Sprite sheet texture
@@ -294,6 +295,7 @@ restart :: proc(game: ^Game, difficulty_to_use: f32) {
 	delete_bullets(game)
 	game.player_pos_x = f32(SCREEN_GRID_SIZE - PLAYER_SIZE) * 0.5
 	game.alien_direction = 1
+	game.round_total_shots = 0
 	place_aliens(game, difficulty_to_use)
 	for &shield, i in game.shields {
 		shield = create_shield(
