@@ -84,7 +84,7 @@ Game :: struct {
 	explosions:            [dynamic]Explosion,
 
 	// Game state variables
-	time:                  f32,
+	ufo_time:              f32,
 	accumulated_time:      f32,
 	accumulated_time2:     f32,
 	game_over:             bool,
@@ -296,6 +296,7 @@ restart :: proc(game: ^Game, difficulty_to_use: f32) {
 	game.player_pos_x = f32(SCREEN_GRID_SIZE - PLAYER_SIZE) * 0.5
 	game.alien_direction = 1
 	game.round_total_shots = 0
+	game.ufo_time = 0
 	place_aliens(game, difficulty_to_use)
 	for &shield, i in game.shields {
 		shield = create_shield(
@@ -700,12 +701,13 @@ main :: proc() {
 	for !rl.WindowShouldClose() {
 		dt := f32(game.num_aliens_alive) / (game.difficulty * 500 + 4000)
 		time_elapsed := rl.GetTime()
+		frame_time := rl.GetFrameTime()
 
 		rl.SetShaderValue(crt_shader, i_time_loc, &time_elapsed, .FLOAT)
 
 		// update state
 		if !game.game_over {
-			game.accumulated_time += rl.GetFrameTime()
+			game.accumulated_time += frame_time
 
 			player_move_velocity: f32
 			if rl.IsKeyDown(.LEFT) {
@@ -723,14 +725,21 @@ main :: proc() {
 						true,
 					)
 					append(&game.player_bullets, new_bullet)
+					game.round_total_shots = (game.round_total_shots + 1) % 15
 				}
 			}
 
 			// Update alien animation
-			update_alien_animation(&game, rl.GetFrameTime())
+			update_alien_animation(&game, frame_time)
 
 			// Update explosions
-			update_explosions(&game, rl.GetFrameTime())
+			update_explosions(&game, frame_time)
+
+			game.ufo_time += frame_time
+			if game.ufo_time > 25.6 {
+				// TODO: make ufo appear
+				game.ufo_time = 0
+			}
 
 			// update
 			for game.accumulated_time >= dt {
