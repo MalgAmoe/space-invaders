@@ -681,7 +681,7 @@ main :: proc() {
 	}
 
 	// Load sprites
-	sprites := init_alien_sprites("alien-sprites.png")
+	sprites := init_alien_sprites("sprites/alien-sprites.png")
 	defer rl.UnloadTexture(sprites.texture)
 
 	// kinda crt shader
