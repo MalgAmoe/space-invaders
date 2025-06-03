@@ -3,7 +3,6 @@ package invaders
 import rl "vendor:raylib"
 
 // Constants remain the same
-SCREEN_SIZE :: 800
 SCREEN_GRID_SIZE :: 320
 PLAYER_SIZE :: 10
 PLAYER_POS_Y :: 280
@@ -37,13 +36,17 @@ ANIMATION_SPEED :: 0.5 // seconds per frame
 EXPLOSION_FRAMES :: 3
 EXPLOSION_DURATION :: 0.25 // seconds
 
+
+screen_size: i32 = 800
+
 main :: proc() {
 	// set falgs and init the window
-	rl.SetConfigFlags({.VSYNC_HINT})
-	rl.InitWindow(SCREEN_SIZE, SCREEN_SIZE, "Space Invaders")
+	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
+	rl.InitWindow(screen_size, screen_size, "Space Invaders")
 	defer rl.CloseWindow()
 
 	rl.SetTargetFPS(200)
+	size := screen_size
 
 	// Initialize the game state
 	game := init_game()
@@ -67,6 +70,14 @@ main :: proc() {
 		time_elapsed := rl.GetTime()
 		frame_time := rl.GetFrameTime()
 
+		if rl.IsWindowResized() {
+			width := rl.GetScreenWidth()
+			height := rl.GetScreenHeight()
+
+			size = min(width, height)
+			rl.SetWindowSize(size, size)
+		}
+
 		// Pass variables to the shader
 		rl.SetShaderValue(crt_shader, i_time_loc, &time_elapsed, .FLOAT)
 
@@ -77,7 +88,7 @@ main :: proc() {
 		rl.BeginDrawing()
 		defer rl.EndDrawing()
 		camera := rl.Camera2D {
-			zoom = f32(SCREEN_SIZE) / SCREEN_GRID_SIZE,
+			zoom = f32(size) / SCREEN_GRID_SIZE,
 		}
 		rl.BeginMode2D(camera)
 		defer rl.EndMode2D()

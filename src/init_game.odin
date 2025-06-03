@@ -87,8 +87,11 @@ setup_shader :: proc() -> (rl.RenderTexture2D, rl.Shader, i32) {
 	i_time_loc := rl.GetShaderLocation(crt_shader, "iTime")
 	screen_resolution_loc := rl.GetShaderLocation(crt_shader, "screenResolution")
 	curvature_loc := rl.GetShaderLocation(crt_shader, "curvature")
+	width := rl.GetScreenWidth()
+	height := rl.GetScreenHeight()
+	size := height > width ? height : width
 
-	screen_resolution: [2]f32 = {f32(SCREEN_SIZE), f32(SCREEN_SIZE)}
+	screen_resolution: [2]f32 = {f32(size), f32(size)}
 	rl.SetShaderValue(crt_shader, screen_resolution_loc, &screen_resolution, .VEC2)
 
 	curvature: f32 = 30
