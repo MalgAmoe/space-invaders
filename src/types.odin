@@ -18,6 +18,7 @@ Game :: struct {
 	alien_bullets:         [dynamic]Bullet, // Changed to Bullet struct
 	alien_animation_timer: f32,
 	alien_current_frame:   int,
+	ufo:                   Ufo,
 
 	// Shield variables
 	shields:               [4]Shield,
@@ -33,6 +34,12 @@ Game :: struct {
 	difficulty:            f32,
 	score:                 f32,
 	round_total_shots:     u8,
+}
+
+Ufo :: struct {
+	position:        rl.Vector2,
+	direction_right: bool,
+	active:          bool,
 }
 
 Shield :: struct {
@@ -63,3 +70,7 @@ AlienSprites :: struct {
 	player_ship:      rl.Rectangle,
 	ufo:              rl.Rectangle,
 }
+
+// original table to calculate points of the ufo
+// it had 50 as the 16th element but it was skipped, so it's not there here
+ufo_points: [15]f32 = {100, 50, 50, 100, 150, 100, 100, 50, 300, 100, 100, 100, 50, 150, 100}

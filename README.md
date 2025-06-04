@@ -14,7 +14,7 @@ todo:
 - [x] protections exploding piece by piece
 - [x] score calculation
 - [x] difficulty with new round
-- [ ] add ufo
+- [x] add ufo
 - [ ] add menus
 - [ ] make it loadable in the browser
 - [ ] add leader board

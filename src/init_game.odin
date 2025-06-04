@@ -74,11 +74,12 @@ init_alien_sprites :: proc(spritesheet_path: cstring) -> AlienSprites {
 	sprites.player_ship = {72, 18, 20, 10}
 
 	// UFO
-	sprites.ufo = {72, 2, 20, 10}
+	sprites.ufo = {72, 2, 20, 14}
 
 	return sprites
 }
 
+// TODO: update crappy crt shader
 setup_shader :: proc() -> (rl.RenderTexture2D, rl.Shader, i32) {
 	// setup the kinda crt shader
 	target_texture := rl.LoadRenderTexture(SCREEN_GRID_SIZE, SCREEN_GRID_SIZE)

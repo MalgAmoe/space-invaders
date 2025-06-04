@@ -73,6 +73,16 @@ draw :: proc(game: ^Game, sprites: AlienSprites, time_elapsed: f64) {
 			}
 		}
 
+		if (game.ufo.active) {
+			dest_rec := rl.Rectangle {
+				x      = game.ufo.position.x,
+				y      = game.ufo.position.y,
+				width  = UFO_SIZE,
+				height = UFO_SIZE / 2,
+			}
+			rl.DrawTexturePro(sprites.texture, sprites.ufo, dest_rec, {0, 0}, 0.0, rl.WHITE)
+		}
+
 		for shield in game.shields {
 			for row, x in shield.pixels {
 				for pixel, y in row {

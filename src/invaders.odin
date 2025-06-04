@@ -2,7 +2,7 @@ package invaders
 
 import rl "vendor:raylib"
 
-// Constants remain the same
+
 SCREEN_GRID_SIZE :: 320
 PLAYER_SIZE :: 10
 PLAYER_POS_Y :: 280
@@ -25,6 +25,8 @@ ALIENS_BLOCK_HEIGHT :: (ALIENS_NUM_Y) * (ALIENS_SPACING + ALIEN_SIZE)
 SMALL_ALIENS_POINTS :: 30
 MEDIUM_ALIENS_POINTS :: 20
 BIG_ALIENS_POINTS :: 10
+UFO_SIZE :: 12
+UFO_SPEED :: 1
 
 SHIELD_Y_POS :: 250
 SHIELD_HEIGHT :: 20
@@ -36,7 +38,7 @@ ANIMATION_SPEED :: 0.5 // seconds per frame
 EXPLOSION_FRAMES :: 3
 EXPLOSION_DURATION :: 0.25 // seconds
 
-
+// screen size not constant to handle resize
 screen_size: i32 = 800
 
 main :: proc() {

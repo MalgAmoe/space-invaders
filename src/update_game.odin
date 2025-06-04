@@ -1,5 +1,6 @@
 package invaders
 
+import "core:fmt"
 import "core:math/rand"
 import rl "vendor:raylib"
 
@@ -35,11 +36,14 @@ update :: proc(game: ^Game, dt, frame_time: f32) {
 		// Update explosions
 		update_explosions(game, frame_time)
 
+		// spawn ufo every 25.6 seconds
 		game.ufo_time += frame_time
 		if game.ufo_time > 25.6 {
-			// TODO: make ufo appear
+			spawn_ufo(&game.ufo)
 			game.ufo_time = 0
 		}
+
+		update_ufo(&game.ufo)
 
 		// update
 		for game.accumulated_time >= dt {
@@ -56,6 +60,7 @@ update :: proc(game: ^Game, dt, frame_time: f32) {
 			if game.last_alien_moved_y >= 0 {
 				move_alien_vertically(game)
 			}
+
 
 			// Alien shooting logic
 			if game.accumulated_time2 > 0 {
@@ -152,6 +157,38 @@ update_alien_animation :: proc(game: ^Game, dt: f32) {
 	if game.alien_animation_timer >= ANIMATION_SPEED {
 		game.alien_animation_timer = 0
 		game.alien_current_frame = (game.alien_current_frame + 1) % 2
+	}
+}
+
+
+// ------------------------------ UFO ------------------------------
+
+spawn_ufo :: proc(ufo: ^Ufo) {
+	// decide which position the ufo start randomly
+	direction_right := rand.float32() > 0.5
+	if (direction_right) {
+		ufo.position = {-UFO_SIZE, 30}
+		ufo.direction_right = true
+	} else {
+		ufo.position = {SCREEN_GRID_SIZE + UFO_SIZE, 30}
+		ufo.direction_right = false
+	}
+	ufo.active = true
+}
+
+update_ufo :: proc(ufo: ^Ufo) {
+	if (ufo.active) {
+		if ufo.direction_right {
+			ufo.position = {ufo.position.x + UFO_SPEED, ufo.position.y}
+			if (ufo.position.x > f32(SCREEN_GRID_SIZE)) {
+				ufo.active = false
+			}
+		} else {
+			ufo.position = {ufo.position.x - UFO_SPEED, ufo.position.y}
+			if (ufo.position.x < f32(0 - UFO_SIZE)) {
+				ufo.active = false
+			}
+		}
 	}
 }
 
@@ -255,6 +292,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 		}
 
 		// Check collision with aliens
+		had_alien_collision := false
 		for alien_stat, alien_index in game.alien_stats {
 			if !game.alien_alive[alien_index] {
 				continue
@@ -262,6 +300,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 
 			if check_bullet_alien_collision(game.player_bullets[i], alien_stat) {
 				game.alien_alive[alien_index] = false
+				had_alien_collision = true
 
 				// Create explosion at alien position
 				explosion := create_explosion(
@@ -280,6 +319,29 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 				}
 				break
 			}
+		}
+		if had_alien_collision do continue
+
+		// check collision with bonus ufo
+		bullet_rect := get_bullet_rect(game.player_bullets[i])
+		ufo_rect := rl.Rectangle {
+			x      = game.ufo.position.x,
+			y      = game.ufo.position.y,
+			width  = UFO_SIZE,
+			height = UFO_SIZE / 2,
+		}
+
+		if rl.CheckCollisionRecs(bullet_rect, ufo_rect) {
+			game.ufo.active = false
+			unordered_remove(&game.player_bullets, i)
+
+			game.score += ufo_points[game.round_total_shots]
+
+			explosion := create_explosion(
+				game.ufo.position.x - UFO_SIZE * 0.5,
+				game.ufo.position.y - UFO_SIZE * 0.25,
+			)
+			append(&game.explosions, explosion)
 		}
 	}
 

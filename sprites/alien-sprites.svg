@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 48">
   <!-- Background -->
-  <rect width="144" height="48" fill="#000" opacity="0.1"/>
-  
+  <rect width="144" height="48" fill="#000" opacity="0.0"/>
+
   <!-- Row labels -->
   <text x="2" y="10" font-family="monospace" font-size="6" fill="#555">Small</text>
   <text x="2" y="24" font-family="monospace" font-size="6" fill="#555">Medium</text>
   <text x="2" y="38" font-family="monospace" font-size="6" fill="#555">Large</text>
-  
+
   <!-- Grid lines -->
   <line x1="0" y1="16" x2="144" y2="16" stroke="#555" stroke-width="0.5" stroke-dasharray="2,2"/>
   <line x1="0" y1="32" x2="144" y2="32" stroke="#555" stroke-width="0.5" stroke-dasharray="2,2"/>
-  
+
   <!-- Small Alien Frame 1 -->
   <g transform="translate(24, 2)">
     <!-- Alien head and body -->
@@ -23,7 +23,7 @@
     <rect x="2" y="10" width="2" height="2" fill="#FF00FF"/>
     <rect x="8" y="10" width="2" height="2" fill="#FF00FF"/>
   </g>
-  
+
   <!-- Small Alien Frame 2 -->
   <g transform="translate(48, 2)">
     <!-- Alien head and body -->
@@ -36,7 +36,7 @@
     <rect x="0" y="10" width="2" height="2" fill="#FF00FF"/>
     <rect x="10" y="10" width="2" height="2" fill="#FF00FF"/>
   </g>
-  
+
   <!-- Medium Alien Frame 1 -->
   <g transform="translate(24, 18)">
     <!-- Alien head and body -->
@@ -50,7 +50,7 @@
     <rect x="4" y="10" width="2" height="2" fill="#00FFFF"/>
     <rect x="10" y="10" width="2" height="2" fill="#00FFFF"/>
   </g>
-  
+
   <!-- Medium Alien Frame 2 -->
   <g transform="translate(48, 18)">
     <!-- Alien head and body -->
@@ -64,7 +64,7 @@
     <rect x="2" y="10" width="2" height="2" fill="#00FFFF"/>
     <rect x="12" y="10" width="2" height="2" fill="#00FFFF"/>
   </g>
-  
+
   <!-- Large Alien Frame 1 -->
   <g transform="translate(24, 34)">
     <!-- Alien head and body -->
@@ -78,7 +78,7 @@
     <rect x="4" y="10" width="2" height="2" fill="#00FF00"/>
     <rect x="14" y="10" width="2" height="2" fill="#00FF00"/>
   </g>
-  
+
   <!-- Large Alien Frame 2 -->
   <g transform="translate(48, 34)">
     <!-- Alien head and body -->
@@ -92,14 +92,25 @@
     <rect x="2" y="10" width="2" height="2" fill="#00FF00"/>
     <rect x="16" y="10" width="2" height="2" fill="#00FF00"/>
   </g>
-  
-  <!-- UFO/Special Ship (bonus) -->
+
+  <!-- UFO/Special Ship (improved) -->
   <g transform="translate(72, 2)">
-    <ellipse cx="10" cy="7" rx="10" ry="5" fill="#FF0000"/>
-    <rect x="4" y="5" width="12" height="2" fill="#000"/>
-    <rect x="2" y="7" width="16" height="1" fill="#FF0000"/>
+    <!-- UFO main body - dome -->
+    <rect x="6" y="0" width="8" height="2" fill="#FF0000"/>
+    <rect x="4" y="2" width="12" height="2" fill="#FF0000"/>
+    <rect x="2" y="4" width="3" height="2" fill="#FF0000"/>
+    <rect x="7" y="4" width="2" height="2" fill="#FF0000"/>
+    <rect x="11" y="4" width="2" height="2" fill="#FF0000"/>
+    <rect x="15" y="4" width="3" height="2" fill="#FF0000"/>
+
+    <!-- UFO base/saucer -->
+    <rect x="0" y="6" width="20" height="2" fill="#FF0000"/>
+    <rect x="1" y="8" width="18" height="2" fill="#FF0000"/>
+    <polygon points="4,10 6,10 5,12" fill="#FF0000"/>
+    <polygon points="9,10 11,10 10,11" fill="#FF0000"/>
+    <polygon points="14,10 16,10 15,12" fill="#FF0000"/>
   </g>
-  
+
   <!-- Player Ship (bonus) -->
   <g transform="translate(72, 18)">
     <rect x="9" y="0" width="2" height="2" fill="#00FF00"/>
@@ -108,12 +119,12 @@
     <rect x="2" y="6" width="16" height="2" fill="#00FF00"/>
     <rect x="0" y="8" width="20" height="2" fill="#00FF00"/>
   </g>
-  
+
   <!-- Explosion Animation Frames (bonus) -->
   <g transform="translate(72, 34)">
     <!-- Frame 1 -->
     <rect x="8" y="4" width="4" height="4" fill="#FFFF00"/>
-    
+
     <!-- Frame 2 -->
     <g transform="translate(24, 0)">
       <rect x="6" y="2" width="2" height="2" fill="#FFFF00"/>
@@ -122,7 +133,7 @@
       <rect x="4" y="8" width="2" height="2" fill="#FFFF00"/>
       <rect x="14" y="8" width="2" height="2" fill="#FFFF00"/>
     </g>
-    
+
     <!-- Frame 3 -->
     <g transform="translate(48, 0)">
       <rect x="4" y="0" width="2" height="2" fill="#FFFF00"/>
