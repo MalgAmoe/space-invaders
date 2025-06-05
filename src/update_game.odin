@@ -106,6 +106,7 @@ update :: proc(game: ^Game, dt, frame_time: f32) {
 					}
 					if alien.y > PLAYER_POS_Y {
 						game.state = .Game_Over
+						game.ufo_time = 0
 					}
 				}
 			}
@@ -114,9 +115,13 @@ update :: proc(game: ^Game, dt, frame_time: f32) {
 		}
 
 	} else if game.state == .Game_Over {
-		if rl.IsKeyPressed(.SPACE) {
-			game.state = .Idle
-			restart(game, game.difficulty)
+		if game.ufo_time < 5 {
+			game.ufo_time += frame_time
+		} else {
+			if rl.IsKeyPressed(.SPACE) {
+				game.state = .Idle
+				restart(game, game.difficulty)
+			}
 		}
 	} else {
 		if rl.IsKeyPressed(.SPACE) {
@@ -432,6 +437,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 
 			if game.lifes_available < 1 {
 				game.state = .Game_Over
+				game.ufo_time = 0
 			}
 		}
 	}

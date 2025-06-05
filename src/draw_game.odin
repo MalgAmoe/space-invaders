@@ -13,6 +13,10 @@ draw :: proc(game: ^Game, sprites: AlienSprites, time_elapsed: f64) {
 
 	switch game.state {
 	case .Idle:
+		// see last score since game active
+		score_text := fmt.ctprint(game.score)
+		rl.DrawText(score_text, 5, 5, 10, rl.WHITE)
+
 		start_text := fmt.ctprint("PRESS SPACE TO START")
 		start_font_size: i32 = 10
 		start_text_width := rl.MeasureText(start_text, start_font_size)
@@ -217,17 +221,19 @@ draw :: proc(game: ^Game, sprites: AlienSprites, time_elapsed: f64) {
 			game_over_color,
 		)
 
-		restart_over_text := fmt.ctprint("PRESS SPACE TO RESTART")
-		restart_over_font_size: i32 = 10
-		restart_over_text_width := rl.MeasureText(restart_over_text, restart_over_font_size)
-		restart_over_color := rl.Color{255, 255, 255, u8(time_elapsed * 1000)}
-		rl.DrawText(
-			restart_over_text,
-			SCREEN_GRID_SIZE / 2 - restart_over_text_width / 2,
-			SCREEN_GRID_SIZE - score_over_font_size - 10,
-			restart_over_font_size,
-			restart_over_color,
-		)
+		if game.ufo_time > 5 {
+			restart_over_text := fmt.ctprint("PRESS SPACE TO RESTART")
+			restart_over_font_size: i32 = 10
+			restart_over_text_width := rl.MeasureText(restart_over_text, restart_over_font_size)
+			restart_over_color := rl.Color{255, 255, 255, u8(time_elapsed * 1000)}
+			rl.DrawText(
+				restart_over_text,
+				SCREEN_GRID_SIZE / 2 - restart_over_text_width / 2,
+				SCREEN_GRID_SIZE - score_over_font_size - 10,
+				restart_over_font_size,
+				restart_over_color,
+			)
+		}
 	}
 }
 
