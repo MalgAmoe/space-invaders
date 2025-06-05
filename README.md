@@ -16,7 +16,8 @@ todo:
 - [x] difficulty with new round
 - [x] add ufo
 - [x] add menus (kind of..)
-- [ ] make it loadable in the browser
+- [x] make it loadable in the browser
+- [ ] add sound
 - [ ] add leader board
 
 # requirements
