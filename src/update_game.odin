@@ -1,11 +1,10 @@
 package invaders
 
-import "core:fmt"
 import "core:math/rand"
 import rl "vendor:raylib"
 
 
-update :: proc(game: ^Game, dt, frame_time: f32) {
+update_game :: proc(game: ^Game, dt, frame_time: f32) {
 	// update state
 	if game.state == .Playing {
 		game.accumulated_time += frame_time
@@ -120,6 +119,7 @@ update :: proc(game: ^Game, dt, frame_time: f32) {
 		} else {
 			if rl.IsKeyPressed(.SPACE) {
 				game.state = .Idle
+				game.difficulty = 1
 				restart(game, game.difficulty)
 			}
 		}
@@ -342,6 +342,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 		if had_alien_collision do continue
 
 		// check collision with bonus ufo
+		if !game.ufo.active do continue
 		bullet_rect := get_bullet_rect(game.player_bullets[i])
 		ufo_rect := rl.Rectangle {
 			x      = game.ufo.position.x,
@@ -381,7 +382,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 		for j := len(game.player_bullets) - 1; j >= 0; j -= 1 {
 			if check_bullet_collision(game.alien_bullets[i], game.player_bullets[j]) {
 				// Create explosion at collision point
-				bullet_pos := game.alien_bullets[i].position
+				// bullet_pos := game.alien_bullets[i].position
 				explosion := create_explosion(
 					game.alien_bullets[i].position.x - game.alien_bullets[i].size.x * 4,
 					game.alien_bullets[i].position.y - game.alien_bullets[i].size.y,

@@ -83,7 +83,7 @@ init_alien_sprites :: proc(spritesheet_path: cstring) -> AlienSprites {
 setup_shader :: proc() -> (rl.RenderTexture2D, rl.Shader, i32) {
 	// setup the kinda crt shader
 	target_texture := rl.LoadRenderTexture(SCREEN_GRID_SIZE, SCREEN_GRID_SIZE)
-	crt_shader := rl.LoadShader(nil, "shader/crt.glsl")
+	crt_shader := rl.LoadShader(nil, "assets/crt.glsl")
 
 	i_time_loc := rl.GetShaderLocation(crt_shader, "iTime")
 	screen_resolution_loc := rl.GetShaderLocation(crt_shader, "screenResolution")

@@ -236,14 +236,3 @@ draw :: proc(game: ^Game, sprites: AlienSprites, time_elapsed: f64) {
 		}
 	}
 }
-
-draw_shader :: proc(target_texture: rl.RenderTexture2D, crt_shader: rl.Shader) {
-	rl.BeginShaderMode(crt_shader)
-	rl.DrawTextureRec(
-		target_texture.texture,
-		rl.Rectangle{0, 0, f32(target_texture.texture.width), f32(target_texture.texture.height)},
-		{0, 0},
-		rl.WHITE,
-	)
-	rl.EndShaderMode()
-}
