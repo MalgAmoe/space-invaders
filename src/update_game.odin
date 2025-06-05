@@ -39,7 +39,7 @@ update :: proc(game: ^Game, dt, frame_time: f32) {
 		// spawn ufo every 25.6 seconds
 		game.ufo_time += frame_time
 		if game.ufo_time > 25.6 {
-			spawn_ufo(&game.ufo)
+			spawn_ufo(game)
 			game.ufo_time = 0
 		}
 
@@ -160,20 +160,29 @@ update_alien_animation :: proc(game: ^Game, dt: f32) {
 	}
 }
 
+alien_count :: proc(game: ^Game) -> int {
+	counter := 0
+	for alive in game.alien_alive {
+		if alive do counter += 1
+	}
+	return counter
+}
 
 // ------------------------------ UFO ------------------------------
 
-spawn_ufo :: proc(ufo: ^Ufo) {
+spawn_ufo :: proc(game: ^Game) {
+	if alien_count(game) <= 7 do return
+
 	// decide which position the ufo start randomly
 	direction_right := rand.float32() > 0.5
 	if (direction_right) {
-		ufo.position = {-UFO_SIZE, 30}
-		ufo.direction_right = true
+		game.ufo.position = {-UFO_SIZE, 30}
+		game.ufo.direction_right = true
 	} else {
-		ufo.position = {SCREEN_GRID_SIZE + UFO_SIZE, 30}
-		ufo.direction_right = false
+		game.ufo.position = {SCREEN_GRID_SIZE + UFO_SIZE, 30}
+		game.ufo.direction_right = false
 	}
-	ufo.active = true
+	game.ufo.active = true
 }
 
 update_ufo :: proc(ufo: ^Ufo) {
