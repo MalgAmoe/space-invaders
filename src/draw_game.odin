@@ -57,20 +57,22 @@ draw :: proc(game: ^Game, sprites: AlienSprites, time_elapsed: f64) {
 				alien_stat := game.alien_stats[alien_number]
 				row := int(alien_number / ALIENS_NUM_X)
 
+				movement := int(time_elapsed * 2) % 2
+
 				frame_rect: rl.Rectangle
 				if row == 0 {
 					// Small alien (top row)
-					frame_rect = sprites.small_frames[game.alien_current_frame]
+					frame_rect = sprites.small_frames[movement]
 				} else if row < 3 {
 					// Medium alien (middle rows)
-					frame_rect = sprites.medium_frames[game.alien_current_frame]
+					frame_rect = sprites.medium_frames[movement]
 				} else {
 					// Large alien (bottom rows)
-					frame_rect = sprites.large_frames[game.alien_current_frame]
+					frame_rect = sprites.large_frames[movement]
 				}
 
 				// Scale factor to match game dimensions
-				scale := 0.5 * ALIEN_SIZE / frame_rect.height * f32(int(time_elapsed * 2) % 2)
+				scale := 0.5 * ALIEN_SIZE / frame_rect.height
 
 				// Calculate the centered position
 				draw_pos_x := alien_stat.x + (alien_stat.z - frame_rect.width * scale) * 0.5

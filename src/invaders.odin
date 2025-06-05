@@ -89,8 +89,7 @@ update :: proc() {
 // `rl.SetWindowSize` call if you don't want a resizable game.
 parent_window_size_changed :: proc(w, h: int) {
 	screen_size = i32(min(w, h))
-	rl.SetWindowSize(screen_size, screen_size)
-	rl.SetWindowSize(c.int(w), c.int(h))
+	rl.SetWindowSize(c.int(screen_size), c.int(screen_size))
 }
 
 shutdown :: proc() {
