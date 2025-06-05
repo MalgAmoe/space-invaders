@@ -1,8 +1,9 @@
 package invaders
 
+import "core:c"
 import rl "vendor:raylib"
 
-
+// CONSTANTS
 SCREEN_GRID_SIZE :: 320
 PLAYER_SIZE :: 10
 PLAYER_POS_Y :: 280
@@ -38,63 +39,74 @@ ANIMATION_SPEED :: 0.5 // seconds per frame
 EXPLOSION_FRAMES :: 3
 EXPLOSION_DURATION :: 0.25 // seconds
 
-// screen size not constant to handle resize
+// GLOBALS
+run: bool
 screen_size: i32 = 800
+game: Game
+sprites: AlienSprites
 
-main :: proc() {
+init :: proc() {
+	run = true
+
 	// set falgs and init the window
 	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
 	rl.InitWindow(screen_size, screen_size, "Space Invaders")
-	defer rl.CloseWindow()
 
 	rl.SetTargetFPS(200)
-	size := screen_size
 
 	// Initialize the game state
-	game := init_game()
-	defer {
-		delete(game.player_bullets) // Clean up dynamic arrays
-		delete(game.alien_bullets)
-		delete(game.explosions)
-	}
+	game = init_game()
 
 	// Load sprites
-	sprites := init_alien_sprites("sprites/alien-sprites.png")
-	defer rl.UnloadTexture(sprites.texture)
+	sprites = init_alien_sprites("assets/alien-sprites.png")
+}
 
-	// Setup the shader and set variables to pass to the shader
-	target_texture, crt_shader, i_time_loc := setup_shader()
 
-	for !rl.WindowShouldClose() {
-		if rl.IsWindowResized() {
-			width := rl.GetScreenWidth()
-			height := rl.GetScreenHeight()
+update :: proc() {
+	// calculate the variable to handle timing
+	// dt value is kinda trial and error to mimic speed of aliens depending on number of aliens
+	dt := f32(game.num_aliens_alive) / (game.difficulty * 500 + 4000)
+	time_elapsed := rl.GetTime()
+	frame_time := rl.GetFrameTime()
 
-			size = min(width, height)
-			rl.SetWindowSize(size, size)
-		}
+	// update all the values of the game
+	update_game(&game, dt, frame_time)
 
-		// calculate the variable to handle timing
-		// dt value is kinda trial and error to mimic speed of aliens depending on number of aliens
-		dt := f32(game.num_aliens_alive) / (game.difficulty * 500 + 4000)
-		time_elapsed := rl.GetTime()
-		frame_time := rl.GetFrameTime()
-
-		// Pass variables to the shader
-		rl.SetShaderValue(crt_shader, i_time_loc, &time_elapsed, .FLOAT)
-
-		// update all the values of the game
-		update(&game, dt, frame_time)
-
-		// draw every changes in the game
-		rl.BeginDrawing()
-		defer rl.EndDrawing()
-		camera := rl.Camera2D {
-			zoom = f32(size) / SCREEN_GRID_SIZE,
-		}
-		rl.BeginMode2D(camera)
-		defer rl.EndMode2D()
-		draw(&game, sprites, time_elapsed)
-		draw_shader(target_texture, crt_shader)
+	// draw every changes in the game
+	rl.BeginDrawing()
+	defer rl.EndDrawing()
+	camera := rl.Camera2D {
+		zoom = f32(screen_size) / SCREEN_GRID_SIZE,
 	}
+	rl.BeginMode2D(camera)
+	defer rl.EndMode2D()
+	draw(&game, sprites, time_elapsed)
+
+	free_all(context.temp_allocator)
+}
+
+// In a web build, this is called when browser changes size. Remove the
+// `rl.SetWindowSize` call if you don't want a resizable game.
+parent_window_size_changed :: proc(w, h: int) {
+	screen_size = i32(min(w, h))
+	rl.SetWindowSize(c.int(screen_size), c.int(screen_size))
+}
+
+shutdown :: proc() {
+	rl.UnloadTexture(sprites.texture)
+	delete(game.player_bullets)
+	delete(game.alien_bullets)
+	delete(game.explosions)
+	rl.CloseWindow()
+}
+
+should_run :: proc() -> bool {
+	when ODIN_OS != .JS {
+		// Never run this proc in browser. It contains a 16 ms sleep on web!
+		if rl.WindowShouldClose() {
+			run = false
+		}
+	}
+
+	return run
 }
