@@ -66,12 +66,6 @@ main :: proc() {
 	target_texture, crt_shader, i_time_loc := setup_shader()
 
 	for !rl.WindowShouldClose() {
-		// calculate the variable to handle timing
-		// dt value is kinda trial and error to mimic speed of aliens depending on number of aliens
-		dt := f32(game.num_aliens_alive) / (game.difficulty * 500 + 4000)
-		time_elapsed := rl.GetTime()
-		frame_time := rl.GetFrameTime()
-
 		if rl.IsWindowResized() {
 			width := rl.GetScreenWidth()
 			height := rl.GetScreenHeight()
@@ -79,6 +73,12 @@ main :: proc() {
 			size = min(width, height)
 			rl.SetWindowSize(size, size)
 		}
+
+		// calculate the variable to handle timing
+		// dt value is kinda trial and error to mimic speed of aliens depending on number of aliens
+		dt := f32(game.num_aliens_alive) / (game.difficulty * 500 + 4000)
+		time_elapsed := rl.GetTime()
+		frame_time := rl.GetFrameTime()
 
 		// Pass variables to the shader
 		rl.SetShaderValue(crt_shader, i_time_loc, &time_elapsed, .FLOAT)

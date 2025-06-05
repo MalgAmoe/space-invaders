@@ -15,7 +15,7 @@ todo:
 - [x] score calculation
 - [x] difficulty with new round
 - [x] add ufo
-- [ ] add menus
+- [x] add menus (kind of..)
 - [ ] make it loadable in the browser
 - [ ] add leader board
 

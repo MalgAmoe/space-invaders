@@ -27,13 +27,19 @@ Game :: struct {
 	explosions:            [dynamic]Explosion,
 
 	// Game state variables
+	state:            Game_State,
 	ufo_time:              f32,
 	accumulated_time:      f32,
 	accumulated_time2:     f32,
-	game_over:             bool,
 	difficulty:            f32,
 	score:                 f32,
 	round_total_shots:     u8,
+}
+
+Game_State :: enum {
+	Idle,
+	Playing,
+	Game_Over,
 }
 
 Ufo :: struct {

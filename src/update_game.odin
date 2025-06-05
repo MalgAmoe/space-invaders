@@ -7,7 +7,7 @@ import rl "vendor:raylib"
 
 update :: proc(game: ^Game, dt, frame_time: f32) {
 	// update state
-	if !game.game_over {
+	if game.state == .Playing {
 		game.accumulated_time += frame_time
 
 		player_move_velocity: f32
@@ -105,7 +105,7 @@ update :: proc(game: ^Game, dt, frame_time: f32) {
 						}
 					}
 					if alien.y > PLAYER_POS_Y {
-						game.game_over = true
+						game.state = .Game_Over
 					}
 				}
 			}
@@ -113,9 +113,14 @@ update :: proc(game: ^Game, dt, frame_time: f32) {
 			game.accumulated_time -= dt
 		}
 
+	} else if game.state == .Game_Over {
+		if rl.IsKeyPressed(.SPACE) {
+			game.state = .Idle
+			restart(game, game.difficulty)
+		}
 	} else {
 		if rl.IsKeyPressed(.SPACE) {
-			game.game_over = false
+			game.state = .Playing
 			game.difficulty = 1
 			game.lifes_available = 3
 			game.score = 0
@@ -426,7 +431,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 			unordered_remove(&game.alien_bullets, i)
 
 			if game.lifes_available < 1 {
-				game.game_over = true
+				game.state = .Game_Over
 			}
 		}
 	}

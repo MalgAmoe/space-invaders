@@ -11,7 +11,80 @@ draw :: proc(game: ^Game, sprites: AlienSprites, time_elapsed: f64) {
 		),
 	)
 
-	if !game.game_over {
+	switch game.state {
+	case .Idle:
+		start_text := fmt.ctprint("PRESS SPACE TO START")
+		start_font_size: i32 = 10
+		start_text_width := rl.MeasureText(start_text, start_font_size)
+		start_color := rl.Color{255, 255, 255, u8(time_elapsed * 1000)}
+		rl.DrawText(
+			start_text,
+			SCREEN_GRID_SIZE / 2 - start_text_width / 2,
+			SCREEN_GRID_SIZE / 2 - start_font_size / 2,
+			start_font_size,
+			start_color,
+		)
+
+		// player
+		rl.DrawTextureRec(
+			sprites.texture,
+			sprites.player_ship,
+			{game.player_pos_x - 5, PLAYER_POS_Y - 5},
+			rl.WHITE,
+		)
+
+		// shield
+		for shield in game.shields {
+			for row, x in shield.pixels {
+				for pixel, y in row {
+					if pixel {
+						rl.DrawRectangleRec(
+							{shield.position.x + f32(x), shield.position.y + f32(y), 1, 1},
+							rl.PURPLE,
+						)
+					}
+				}
+			}
+		}
+
+		// draw aliens
+		for alien_number in 0 ..< ALIENS_NUM_X * ALIENS_NUM_Y {
+			if game.alien_alive[alien_number] {
+				alien_stat := game.alien_stats[alien_number]
+				row := int(alien_number / ALIENS_NUM_X)
+
+				frame_rect: rl.Rectangle
+				if row == 0 {
+					// Small alien (top row)
+					frame_rect = sprites.small_frames[game.alien_current_frame]
+				} else if row < 3 {
+					// Medium alien (middle rows)
+					frame_rect = sprites.medium_frames[game.alien_current_frame]
+				} else {
+					// Large alien (bottom rows)
+					frame_rect = sprites.large_frames[game.alien_current_frame]
+				}
+
+				// Scale factor to match game dimensions
+				scale := 0.5 * ALIEN_SIZE / frame_rect.height * f32(int(time_elapsed * 2) % 2)
+
+				// Calculate the centered position
+				draw_pos_x := alien_stat.x + (alien_stat.z - frame_rect.width * scale) * 0.5
+				draw_pos_y := alien_stat.y
+
+				// Draw the alien sprite at its position with scaling
+				source_rec := frame_rect
+				dest_rec := rl.Rectangle {
+					x      = draw_pos_x,
+					y      = draw_pos_y,
+					width  = alien_stat.z,
+					height = alien_stat.z,
+				}
+
+				rl.DrawTexturePro(sprites.texture, source_rec, dest_rec, {0, 0}, 0.0, rl.WHITE)
+			}
+		}
+	case .Playing:
 		score_text := fmt.ctprint(game.score)
 		rl.DrawText(score_text, 5, 5, 10, rl.WHITE)
 
@@ -113,7 +186,7 @@ draw :: proc(game: ^Game, sprites: AlienSprites, time_elapsed: f64) {
 				rl.DrawTexturePro(sprites.texture, frame_rect, dest_rec, {0, 0}, 0.0, rl.WHITE)
 			}
 		}
-	} else {
+	case .Game_Over:
 		game_over_text := fmt.ctprint("GAME OVER")
 		game_over_font_size := i32(u8(time_elapsed / 0.01)) / 3
 
