@@ -382,7 +382,6 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 		for j := len(game.player_bullets) - 1; j >= 0; j -= 1 {
 			if check_bullet_collision(game.alien_bullets[i], game.player_bullets[j]) {
 				// Create explosion at collision point
-				// bullet_pos := game.alien_bullets[i].position
 				explosion := create_explosion(
 					game.alien_bullets[i].position.x - game.alien_bullets[i].size.x * 4,
 					game.alien_bullets[i].position.y - game.alien_bullets[i].size.y,
@@ -407,7 +406,6 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 		for &shield in game.shields {
 			if check_bullet_shield_collision(game.alien_bullets[i], &shield) {
 				// Create explosion at collision point
-				// bullet_pos := game.alien_bullets[i].position
 				explosion := create_explosion(
 					game.alien_bullets[i].position.x - game.alien_bullets[i].size.x * 4,
 					game.alien_bullets[i].position.y - game.alien_bullets[i].size.y,
