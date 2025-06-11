@@ -3,6 +3,8 @@ package invaders
 import "core:math/rand"
 import rl "vendor:raylib"
 
+import "audio"
+
 
 update_game :: proc(game: ^Game, dt, frame_time: f32) {
 	// update state
@@ -114,6 +116,9 @@ update_game :: proc(game: ^Game, dt, frame_time: f32) {
 		}
 
 	} else if game.state == .Game_Over {
+		if !audio.muted {
+			audio.muted = true
+		}
 		if game.ufo_time < 5 {
 			game.ufo_time += frame_time
 		} else {
@@ -129,6 +134,11 @@ update_game :: proc(game: ^Game, dt, frame_time: f32) {
 			game.difficulty = 1
 			game.lifes_available = 3
 			game.score = 0
+			if !audio.started {
+				audio.init()
+				audio.start()
+			}
+			audio.muted = false
 
 			restart(game, game.difficulty)
 		}
