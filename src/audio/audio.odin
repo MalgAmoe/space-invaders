@@ -3,6 +3,10 @@ package audio
 import "core:math"
 import rl "vendor:raylib"
 
+// samplerate could be read from audioContext
+// for simplicicty we use miniaudio auto conversion
+SAMPLE_RATE :: 44100
+
 g_frequency: f32 = 440.0 // A4 note
 g_phase: f32 = 0.0
 g_volume: f32 = 0.3
@@ -11,19 +15,18 @@ muted := true
 
 stream: rl.AudioStream
 
-// Audio callback - generates sine wave
 audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
-    // Cast buffer to f32 slice (assuming 32-bit float, stereo)
+	// Cast buffer to f32 slice (assuming 32-bit float, stereo)
 	sample_count := int(frames * 2) // stereo = 2 channels
 	buffer := ([^]f32)(buffer_data)[:sample_count]
+
 	if !muted {
-		sample_rate: f32 = 44100.0
-		phase_increment := g_frequency * 2.0 * math.PI / sample_rate
+		phase_increment := g_frequency * 2.0 * math.PI / SAMPLE_RATE
 
 		// Generate samples
 		for i := 0; i < int(frames); i += 1 {
 			// Generate sine wave sample
-			sample := math.sin(g_phase) * g_volume
+			sample: f32 = 0 // math.sin(g_phase) * g_volume
 
 			// Write to both channels (stereo)
 			buffer[i * 2] = sample // left
@@ -47,12 +50,12 @@ init :: proc() {
 	rl.InitAudioDevice()
 
 	// Create audio stream with callback
-	stream = rl.LoadAudioStream(44100, 32, 2) // 44.1kHz, 32-bit float, stereo
+	stream = rl.LoadAudioStream(SAMPLE_RATE, 32, 2) // 44.1kHz, 32-bit float, stereo
 	rl.SetAudioStreamCallback(stream, audio_callback)
 }
 
 start :: proc() {
-    started = true
+	started = true
 	rl.PlayAudioStream(stream)
 }
 
