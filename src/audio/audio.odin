@@ -1,42 +1,39 @@
 package audio
 
-import "core:math"
+import "base:runtime"
+
 import rl "vendor:raylib"
 
 // samplerate could be read from audioContext
 // for simplicicty we use miniaudio auto conversion
 SAMPLE_RATE :: 44100
 
-g_frequency: f32 = 440.0 // A4 note
-g_phase: f32 = 0.0
-g_volume: f32 = 0.3
+counter: f32 = 1
 started := false
 muted := true
 
 stream: rl.AudioStream
 
+bass := Bass_create()
+
 audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
+	context = runtime.default_context()
 	// Cast buffer to f32 slice (assuming 32-bit float, stereo)
 	sample_count := int(frames * 2) // stereo = 2 channels
 	buffer := ([^]f32)(buffer_data)[:sample_count]
 
 	if !muted {
-		phase_increment := g_frequency * 2.0 * math.PI / SAMPLE_RATE
-
-		// Generate samples
 		for i := 0; i < int(frames); i += 1 {
-			// Generate sine wave sample
-			sample: f32 = 0 // math.sin(g_phase) * g_volume
+			counter += 0.00003
+			if counter >= 1 {
+				counter = 0
+				Bass_trigger_note(&bass)
+			}
+			sample: f32 = 0.2 * Bass_next_sample(&bass)
 
 			// Write to both channels (stereo)
-			buffer[i * 2] = sample // left
-			buffer[i * 2 + 1] = sample // right
-
-			// Advance phase
-			g_phase += phase_increment
-			if g_phase > 2.0 * math.PI {
-				g_phase -= 2.0 * math.PI
-			}
+			buffer[i * 2] = sample
+			buffer[i * 2 + 1] = sample
 		}
 	} else {
 		for i := 0; i < int(frames); i += 1 {

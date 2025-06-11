@@ -2,6 +2,8 @@ package audio
 
 import "core:math"
 
+// Filters
+
 Fiter_Type :: enum {
 	Lowpass,
 	Highpass,
@@ -25,14 +27,16 @@ Filter_next_value :: proc(lp: ^Filter, input: f32) -> f32 {
 }
 
 Filter_create :: proc(filter_type: Fiter_Type, cutoff_freq: f32, Q: f32 = 0.707) -> Filter {
-    filter := Filter{ type = filter_type}
+	filter := Filter {
+		type = filter_type,
+	}
 
-    switch filter_type {
-        case .Lowpass:
-            Lowpass_update(&filter, cutoff_freq, Q)
-        case .Highpass:
-            Highpass_update(&filter, cutoff_freq, Q)
-    }
+	switch filter_type {
+	case .Lowpass:
+		Lowpass_update(&filter, cutoff_freq, Q)
+	case .Highpass:
+		Highpass_update(&filter, cutoff_freq, Q)
+	}
 
 	return filter
 }
@@ -63,4 +67,14 @@ Highpass_update :: proc(lp: ^Filter, cutoff_freq: f32, Q: f32 = 0.707) {
 	lp.a2 = lp.a0
 	lp.b1 = (-2 * cosW0) / b0
 	lp.b2 = (1 - alpha) / b0
+}
+
+// waveshapers
+
+digital_clipper :: proc(sample: f32, gain: f32) -> f32 {
+	return math.clamp(gain * sample, -1, 1)
+}
+
+distortion :: proc(sample: f32, gain: f32) -> f32 {
+	return math.tanh(gain * sample)
 }

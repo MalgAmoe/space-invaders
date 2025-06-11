@@ -58,7 +58,7 @@ init :: proc() {
 
 	// Initialize the game state
 	game = init_game()
-	
+
 	// Load sprites
 	sprites = init_alien_sprites("assets/alien-sprites.png")
 }
