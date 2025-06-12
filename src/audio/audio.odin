@@ -15,6 +15,9 @@ muted := true
 stream: rl.AudioStream
 
 bass := Bass_create()
+alien_explosion := Alien_Explosion_create()
+
+alien_explosion_triggered := false
 
 audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 	context = runtime.default_context()
@@ -29,7 +32,13 @@ audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 				counter = 0
 				Bass_trigger_note(&bass)
 			}
-			sample: f32 = 0.35 * Bass_next_sample(&bass)
+			if alien_explosion_triggered {
+				alien_explosion_triggered = false
+				Alien_explosion_trigger(&alien_explosion)
+			}
+
+			sample: f32 =
+				0.35 * Bass_next_sample(&bass) + 0.2 * Alien_Explosion_next(&alien_explosion)
 
 			// Write to both channels (stereo)
 			buffer[i * 2] = sample

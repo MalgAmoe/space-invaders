@@ -101,7 +101,7 @@ LFO :: struct {
 	waveform:  LFO_Type,
 }
 
-Lfo_init :: proc(type: LFO_Type, freq: f32) -> LFO {
+Lfo_create :: proc(type: LFO_Type, freq: f32) -> LFO {
 	return LFO{waveform = type, frequency = freq}
 }
 
@@ -120,7 +120,7 @@ Lfo_next :: proc(lfo: ^LFO) -> f32 {
 	}
 
 	phase_inc := lfo.frequency / SAMPLE_RATE
-	current_phase := math.mod_f32(lfo.phase + phase_inc, 1.0)
+	lfo.phase = math.mod_f32(lfo.phase + phase_inc, 1.0)
 
 	return output
 }

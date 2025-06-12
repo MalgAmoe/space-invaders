@@ -341,6 +341,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 				game.num_aliens_alive -= 1
 				game.score += alien_stat.w
 				audio.bass.retrigger_time = audio.TRIGGER_OFFSET + 630 * f32(game.num_aliens_alive)
+				audio.alien_explosion_triggered = true
 
 				if game.num_aliens_alive == 0 {
 					game.difficulty = f32(int(1 + game.difficulty) % 11)
