@@ -55,6 +55,7 @@ Sine_Osc_next_linear :: proc(osc: ^Sine_Osc, mod: f32 = 1) -> f32 {
 	index_float := osc.sine_idx * f32(SINE_WAVETABLE_SIZE)
 	if index_float < 0 do index_float += f32(SINE_WAVETABLE_SIZE)
 	index := int(index_float) % SINE_WAVETABLE_SIZE
+	if index < 0 do index = SINE_WAVETABLE_SIZE + index
 	next_index := (index + 1) % SINE_WAVETABLE_SIZE
 	fractional := index_float - f32(int(index_float))
 	sample := osc.wave[index] * (1 - fractional) + osc.wave[next_index] * fractional

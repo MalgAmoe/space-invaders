@@ -71,10 +71,24 @@ Highpass_update :: proc(lp: ^Filter, cutoff_freq: f32, Q: f32 = 0.707) {
 
 // waveshapers
 
-digital_clipper :: proc(sample: f32, gain: f32) -> f32 {
+digital_clipper :: proc(sample: f32, gain: f32 = 1) -> f32 {
 	return math.clamp(gain * sample, -1, 1)
 }
 
-distortion :: proc(sample: f32, gain: f32) -> f32 {
+distortion :: proc(sample: f32, gain: f32 = 1) -> f32 {
 	return math.tanh(gain * sample)
+}
+
+wave_fold :: proc(sample: f32) -> f32 {
+	return_sample: f32
+
+	if sample > 0.5 {
+		return_sample = 1 - sample
+	} else if sample < 0.5 {
+		return_sample = -1 - sample
+	} else {
+		return_sample = sample
+	}
+
+	return return_sample
 }

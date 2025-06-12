@@ -8,16 +8,20 @@ import rl "vendor:raylib"
 // for simplicicty we use miniaudio auto conversion
 SAMPLE_RATE :: 44100
 
-counter: f32 = TRIGGER_TIME
 started := false
 muted := true
 
 stream: rl.AudioStream
 
+counter: f32 = TRIGGER_TIME
 bass := Bass_create()
-alien_explosion := Alien_Explosion_create()
 
 alien_explosion_triggered := false
+alien_explosion := Alien_Explosion_create()
+
+ufo_is_present := false
+ufo_present := UFO_Present_create()
+
 
 audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 	context = runtime.default_context()
@@ -36,9 +40,14 @@ audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 				alien_explosion_triggered = false
 				Alien_explosion_trigger(&alien_explosion)
 			}
+			ufo_present_sample := ufo_is_present ? UFO_Present_next(&ufo_present) : 0
 
-			sample: f32 =
-				0.35 * Bass_next_sample(&bass) + 0.2 * Alien_Explosion_next(&alien_explosion)
+			sample: f32 = distortion(
+				0.35 * Bass_next(&bass) +
+				0.2 * Alien_Explosion_next(&alien_explosion) +
+				0.4 * ufo_present_sample,
+				0.8,
+			)
 
 			// Write to both channels (stereo)
 			buffer[i * 2] = sample

@@ -206,6 +206,7 @@ spawn_ufo :: proc(game: ^Game) {
 
 update_ufo :: proc(ufo: ^Ufo) {
 	if (ufo.active) {
+		audio.ufo_is_present = true
 		if ufo.direction_right {
 			ufo.position = {ufo.position.x + UFO_SPEED, ufo.position.y}
 			if (ufo.position.x > f32(SCREEN_GRID_SIZE)) {
@@ -217,6 +218,8 @@ update_ufo :: proc(ufo: ^Ufo) {
 				ufo.active = false
 			}
 		}
+	} else {
+		audio.ufo_is_present = false
 	}
 }
 
