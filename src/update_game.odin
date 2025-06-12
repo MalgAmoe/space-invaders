@@ -62,7 +62,6 @@ update_game :: proc(game: ^Game, dt, frame_time: f32) {
 				move_alien_vertically(game)
 			}
 
-
 			// Alien shooting logic
 			if game.accumulated_time2 > 0 {
 				game.accumulated_time2 -= dt
@@ -341,6 +340,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 				unordered_remove(&game.player_bullets, i)
 				game.num_aliens_alive -= 1
 				game.score += alien_stat.w
+				audio.bass.retrigger_time = audio.TRIGGER_OFFSET + 630 * f32(game.num_aliens_alive)
 
 				if game.num_aliens_alive == 0 {
 					game.difficulty = f32(int(1 + game.difficulty) % 11)

@@ -8,7 +8,7 @@ import rl "vendor:raylib"
 // for simplicicty we use miniaudio auto conversion
 SAMPLE_RATE :: 44100
 
-counter: f32 = 1
+counter: f32 = TRIGGER_TIME
 started := false
 muted := true
 
@@ -24,12 +24,12 @@ audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 
 	if !muted {
 		for i := 0; i < int(frames); i += 1 {
-			counter += 0.00003
-			if counter >= 1 {
+			counter += 1
+			if counter >= bass.retrigger_time {
 				counter = 0
 				Bass_trigger_note(&bass)
 			}
-			sample: f32 = 0.2 * Bass_next_sample(&bass)
+			sample: f32 = 0.35 * Bass_next_sample(&bass)
 
 			// Write to both channels (stereo)
 			buffer[i * 2] = sample

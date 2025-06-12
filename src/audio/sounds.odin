@@ -1,5 +1,8 @@
 package audio
 
+TRIGGER_OFFSET :: 3720
+TRIGGER_TIME :: 630 * 55 + TRIGGER_OFFSET
+
 triggers :: enum {
 	Shot,
 	Alien_Explosion,
@@ -19,21 +22,19 @@ Bass :: struct {
 
 Bass_create :: proc() -> Bass {
 	return Bass {
-		lp = Filter_create(.Lowpass, 400),
+		lp = Filter_create(.Lowpass, 900),
 		notes = {61.73541, 55, 48.99943, 46.24930},
 		env = ADEnv_create(SAMPLE_RATE, 0, 0.113),
 		sine_osc = Sine_Osc_create(61.73541),
-		retrigger_time = 1,
+		retrigger_time = TRIGGER_TIME,
 	}
 }
 
 Bass_next_sample :: proc(b: ^Bass) -> f32 {
 	env := ADEnv_nextValue(&b.env)
 	if env == 0 do return 0
-	distorted_sine := digital_clipper(Sine_Osc_next_linear(&b.sine_osc), 8)
-	noise := White_noise_next()
-	s := digital_clipper((0.9 * distorted_sine + 0.1 * noise) * env, 7)
-	return Filter_next_value(&b.lp, s)
+	distorted_sine := digital_clipper(Sine_Osc_next_linear(&b.sine_osc), 20)
+	return Filter_next_value(&b.lp, distorted_sine * env)
 }
 
 Bass_trigger_note :: proc(b: ^Bass) {
