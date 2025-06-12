@@ -86,3 +86,41 @@ Pink_noise_next :: proc(p: ^Pink_Noise) -> f32 {
 
 	return p.b[0] + p.b[1] + p.b[2] + white * 0.1848
 }
+
+// low frequency oscillator
+// used to make some parameters change in time(like frequency)
+
+LFO_Type :: enum {
+	Triangle,
+	Sawtooth,
+}
+
+LFO :: struct {
+	frequency: f32,
+	phase:     f32,
+	waveform:  LFO_Type,
+}
+
+Lfo_init :: proc(type: LFO_Type, freq: f32) -> LFO {
+	return LFO{waveform = type, frequency = freq}
+}
+
+Lfo_next :: proc(lfo: ^LFO) -> f32 {
+	output: f32
+
+	switch lfo.waveform {
+	case .Triangle:
+		if lfo.phase < 0.5 {
+			output = 2.0 * lfo.phase
+		} else {
+			output = 2.0 - 2.0 * lfo.phase
+		}
+	case .Sawtooth:
+		output = 1.0 - lfo.phase
+	}
+
+	phase_inc := lfo.frequency / SAMPLE_RATE
+	current_phase := math.mod_f32(lfo.phase + phase_inc, 1.0)
+
+	return output
+}
