@@ -1,6 +1,5 @@
 package audio
 
-import "core:fmt"
 import "core:math"
 
 
@@ -110,4 +109,34 @@ UFO_Present_next :: proc(ufo: ^UFO_Present) -> f32 {
 	lfo := 1 + distortion(-1.15 * math.abs(Sine_Osc_next_linear(&ufo.lfo)))
 	sine := Sine_Osc_next_linear(&ufo.sine, lfo)
 	return distortion(Filter_next_value(&ufo.lp, wave_fold(sine)))
+}
+
+
+// UFO killed
+
+UFO_Killed :: struct {
+	sine: Sine_Osc,
+	lfo:  LFO,
+	env:  AHDEnv,
+}
+
+UFO_Killed_create :: proc() -> UFO_Killed {
+	return UFO_Killed {
+		sine = Sine_Osc_create(150),
+		lfo = Lfo_create(.Triangle, 6),
+		env = AHDEnv_create(SAMPLE_RATE, 0, 1, 1.3),
+	}
+}
+
+UFO_Killed_next :: proc(ufo: ^UFO_Killed) -> f32 {
+	env := AHDEnv_nextValue(&ufo.env, 1)
+	if env == 0 do return 0
+
+	lfo := 9 * Lfo_next(&ufo.lfo) + 1
+	return distortion(Sine_Osc_next_linear(&ufo.sine, lfo)) * env
+}
+
+UFO_Killed_trigger :: proc(ufo: ^UFO_Killed) {
+	AHDEnv_trigger(&ufo.env)
+	ufo.lfo.phase = 0
 }

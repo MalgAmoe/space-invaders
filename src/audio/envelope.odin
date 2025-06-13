@@ -27,7 +27,7 @@ AHDEnv_create :: proc(sample_rate: f32, attack: f32, decay: f32, hold: f32 = 0) 
 		attack_samples = attack * sample_rate,
 		hold_samples = hold * sample_rate,
 		decay_samples = decay * sample_rate,
-		time_elapsed = (attack + decay) * sample_rate,
+		time_elapsed = (attack + hold + decay) * sample_rate,
 	}
 }
 
@@ -40,7 +40,7 @@ AHDEnv_trigger :: proc(env: ^AHDEnv) {
 }
 
 AHDEnv_nextValue :: proc(env: ^AHDEnv, curve: f32 = 3) -> f32 {
-	if (env.time_elapsed >= env.attack_samples + env.decay_samples) {
+	if (env.time_elapsed >= env.attack_samples + env.hold_samples + env.decay_samples) {
 		env.value = 0
 		return 0
 	}

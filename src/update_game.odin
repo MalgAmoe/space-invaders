@@ -367,6 +367,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 
 		if rl.CheckCollisionRecs(bullet_rect, ufo_rect) {
 			game.ufo.active = false
+			audio.ufo_killed_triggered = true
 			unordered_remove(&game.player_bullets, i)
 
 			game.score += ufo_points[game.round_total_shots]

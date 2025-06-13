@@ -22,6 +22,9 @@ alien_explosion := Alien_Explosion_create()
 ufo_is_present := false
 ufo_present := UFO_Present_create()
 
+ufo_killed_triggered := false
+ufo_killed := UFO_Killed_create()
+
 
 audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 	context = runtime.default_context()
@@ -41,11 +44,18 @@ audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 				Alien_explosion_trigger(&alien_explosion)
 			}
 			ufo_present_sample := ufo_is_present ? UFO_Present_next(&ufo_present) : 0
+			
+			if ufo_killed_triggered {
+				ufo_killed_triggered = false
+				UFO_Killed_trigger(&ufo_killed)
+			}
+
 
 			sample: f32 = distortion(
 				0.35 * Bass_next(&bass) +
 				0.2 * Alien_Explosion_next(&alien_explosion) +
-				0.3 * ufo_present_sample,
+				0.3 * ufo_present_sample +
+				0.25 * UFO_Killed_next(&ufo_killed),
 				0.8,
 			)
 
