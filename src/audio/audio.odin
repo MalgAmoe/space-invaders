@@ -45,7 +45,7 @@ audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 			sample: f32 = distortion(
 				0.35 * Bass_next(&bass) +
 				0.2 * Alien_Explosion_next(&alien_explosion) +
-				0.4 * ufo_present_sample,
+				0.3 * ufo_present_sample,
 				0.8,
 			)
 
