@@ -28,6 +28,7 @@ update_game :: proc(game: ^Game, dt, frame_time: f32) {
 				)
 				append(&game.player_bullets, new_bullet)
 				game.round_total_shots = (game.round_total_shots + 1) % 15
+				audio.player_shot_triggered = true
 			}
 		}
 

@@ -158,6 +158,7 @@ Player_Killed_create :: proc() -> Player_Killed {
 	}
 }
 
+// lowpass filtered pink noise
 Player_Killed_next :: proc(p: ^Player_Killed) -> f32 {
 	env := AHDEnv_nextValue(&p.env)
 	noise := Pink_Noise_next(&p.noise)
@@ -166,4 +167,47 @@ Player_Killed_next :: proc(p: ^Player_Killed) -> f32 {
 
 Player_Killed_trigger :: proc(p: ^Player_Killed) {
 	AHDEnv_trigger(&p.env)
+}
+
+
+// Player shot
+
+Player_Shot :: struct {
+	sound: Sine_Osc,
+	env:   AHDEnv,
+	noise: Pink_Noise,
+}
+
+Player_Shot_create :: proc() -> Player_Shot {
+	return Player_Shot {
+		sound = Sine_Osc_create(2793.826),
+		env = AHDEnv_create(SAMPLE_RATE, 0, 0.2, 0.4),
+	}
+}
+
+// sine wave at F7 with a bit of pink noise clipped hard
+Player_Shot_next :: proc(p: ^Player_Shot) -> f32 {
+	env := AHDEnv_nextValue(&p.env)
+	if env == 0 do return 0
+
+	if env < 1 {
+		p.sound.freq -= 0.01
+	}
+
+	return(
+		digital_clipper(
+			0.6 * Sine_Osc_next_linear(&p.sound) + 0.1 * Pink_Noise_next(&p.noise),
+			12,
+		) *
+		env \
+	)
+}
+
+Player_Shot_trigger :: proc(p: ^Player_Shot) {
+	p.sound.freq = 2793.826
+	AHDEnv_trigger(&p.env)
+}
+
+Player_Shot_stop :: proc(p: ^Player_Shot) {
+	p.env.time_elapsed = p.env.hold_samples + p.env.decay_samples
 }
