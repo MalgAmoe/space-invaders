@@ -38,7 +38,7 @@ audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 	sample_count := int(frames * 2) // stereo = 2 channels
 	buffer := ([^]f32)(buffer_data)[:sample_count]
 
-	if !muted {
+	// if !muted {
 		for i := 0; i < int(frames); i += 1 {
 			counter += 1
 			if counter >= bass.retrigger_time {
@@ -67,27 +67,31 @@ audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 			}
 
 
-			sample: f32 = distortion(
-				0.35 * Bass_next(&bass) +
-				0.2 * Alien_Explosion_next(&alien_explosion) +
-				0.25 * ufo_present_sample +
-				0.25 * UFO_Killed_next(&ufo_killed) +
-				0.3 * Player_Killed_next(&player_killed) +
-				0.08 * Player_Shot_next(&player_shot),
-				0.6,
-			)
+			if !muted {
+				sample: f32 = distortion(
+					0.35 * Bass_next(&bass) +
+					0.2 * Alien_Explosion_next(&alien_explosion) +
+					0.25 * ufo_present_sample +
+					0.25 * UFO_Killed_next(&ufo_killed) +
+					0.3 * Player_Killed_next(&player_killed) +
+					0.08 * Player_Shot_next(&player_shot),
+					0.6,
+				)
+	
+				// Write to both channels (stereo)
+				buffer[i * 2] = sample
+				buffer[i * 2 + 1] = sample
+			} else {
 
-			// Write to both channels (stereo)
-			buffer[i * 2] = sample
-			buffer[i * 2 + 1] = sample
+				// for i := 0; i < int(frames); i += 1 {
+					sample: f32 = distortion(0.3 * Player_Killed_next(&player_killed))
+					buffer[i * 2] = sample
+					buffer[i * 2 + 1] = sample
+				// }
+			}
 		}
-	} else {
-		for i := 0; i < int(frames); i += 1 {
-			sample := distortion(0.3 * Player_Killed_next(&player_killed))
-			buffer[i * 2] = sample
-			buffer[i * 2 + 1] = sample
-		}
-	}
+// 	} else {
+// 	}
 }
 
 init :: proc() {

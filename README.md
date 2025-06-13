@@ -6,6 +6,8 @@ This is the classic arcade game, space invaders. I try to stay close to the way 
 
 It's really fun, I get why it is a classic.
 
+You can try it [here](https://nonsensinator.fly.dev/space-invaders)
+
 todo:
 
 - [x] aliens moving
@@ -17,7 +19,7 @@ todo:
 - [x] add ufo
 - [x] add menus (kind of..)
 - [x] make it loadable in the browser
-- [ ] add sound
+- [x] add sound
 - [ ] add leader board
 
 # requirements
@@ -28,4 +30,5 @@ He wrote a [book](https://odinbook.com/) about odin too, it's really good!
 
 # running
 
-To run the program you can run `odin run .` or `make run`.
+To run the program you can run `./build_desktop.sh` and run the generated program in build.
+Also you can run `./build_web.sh` and run the test_server.py with python.
