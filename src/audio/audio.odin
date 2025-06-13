@@ -25,6 +25,9 @@ ufo_present := UFO_Present_create()
 ufo_killed_triggered := false
 ufo_killed := UFO_Killed_create()
 
+player_killed_triggered := false
+player_killed := Player_Killed_create()
+
 
 audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 	context = runtime.default_context()
@@ -44,18 +47,23 @@ audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 				Alien_explosion_trigger(&alien_explosion)
 			}
 			ufo_present_sample := ufo_is_present ? UFO_Present_next(&ufo_present) : 0
-			
+
 			if ufo_killed_triggered {
 				ufo_killed_triggered = false
 				UFO_Killed_trigger(&ufo_killed)
+			}
+			if player_killed_triggered {
+				player_killed_triggered = false
+				Player_Killed_trigger(&player_killed)
 			}
 
 
 			sample: f32 = distortion(
 				0.35 * Bass_next(&bass) +
 				0.2 * Alien_Explosion_next(&alien_explosion) +
-				0.3 * ufo_present_sample +
-				0.25 * UFO_Killed_next(&ufo_killed),
+				0.25 * ufo_present_sample +
+				0.25 * UFO_Killed_next(&ufo_killed) +
+				0.3 * Player_Killed_next(&player_killed),
 				0.8,
 			)
 
@@ -65,8 +73,9 @@ audio_callback :: proc "c" (buffer_data: rawptr, frames: u32) {
 		}
 	} else {
 		for i := 0; i < int(frames); i += 1 {
-			buffer[i * 2] = 0
-			buffer[i * 2 + 1] = 0
+			sample := distortion(0.3 * Player_Killed_next(&player_killed))
+			buffer[i * 2] = sample
+			buffer[i * 2 + 1] = sample
 		}
 	}
 }

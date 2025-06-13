@@ -105,6 +105,7 @@ update_game :: proc(game: ^Game, dt, frame_time: f32) {
 						}
 					}
 					if alien.y > PLAYER_POS_Y {
+						audio.player_killed_triggered = true
 						game.state = .Game_Over
 						game.ufo_time = 0
 					}
@@ -439,6 +440,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 		// Check collision with player
 		if check_bullet_player_collision(game.alien_bullets[i], game.player_pos_x) {
 			game.lifes_available -= 1
+			audio.player_killed_triggered = true
 
 			// Create explosion at player position
 			explosion := create_explosion(

@@ -78,7 +78,7 @@ Pink_Noise :: struct {
 	b: [3]f32,
 }
 
-Pink_noise_next :: proc(p: ^Pink_Noise) -> f32 {
+Pink_Noise_next :: proc(p: ^Pink_Noise) -> f32 {
 	white := rand.float32_range(-1, 1)
 
 	p.b[0] = 0.99765 * p.b[0] + white * 0.0990460

@@ -140,3 +140,30 @@ UFO_Killed_trigger :: proc(ufo: ^UFO_Killed) {
 	AHDEnv_trigger(&ufo.env)
 	ufo.lfo.phase = 0
 }
+
+
+// player explosion
+
+Player_Killed :: struct {
+	noise: Pink_Noise,
+	lp:    Filter,
+	env:   AHDEnv,
+}
+
+Player_Killed_create :: proc() -> Player_Killed {
+	return Player_Killed {
+		noise = Pink_Noise{},
+		lp = Filter_create(.Lowpass, 800),
+		env = AHDEnv_create(SAMPLE_RATE, 0, 1.83),
+	}
+}
+
+Player_Killed_next :: proc(p: ^Player_Killed) -> f32 {
+	env := AHDEnv_nextValue(&p.env)
+	noise := Pink_Noise_next(&p.noise)
+	return Filter_next_value(&p.lp, noise) * env
+}
+
+Player_Killed_trigger :: proc(p: ^Player_Killed) {
+	AHDEnv_trigger(&p.env)
+}
