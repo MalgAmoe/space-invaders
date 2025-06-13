@@ -3,6 +3,8 @@ package invaders
 import "core:math/rand"
 import rl "vendor:raylib"
 
+import "audio"
+
 
 update_game :: proc(game: ^Game, dt, frame_time: f32) {
 	// update state
@@ -60,7 +62,6 @@ update_game :: proc(game: ^Game, dt, frame_time: f32) {
 				move_alien_vertically(game)
 			}
 
-
 			// Alien shooting logic
 			if game.accumulated_time2 > 0 {
 				game.accumulated_time2 -= dt
@@ -104,6 +105,7 @@ update_game :: proc(game: ^Game, dt, frame_time: f32) {
 						}
 					}
 					if alien.y > PLAYER_POS_Y {
+						audio.player_killed_triggered = true
 						game.state = .Game_Over
 						game.ufo_time = 0
 					}
@@ -114,6 +116,9 @@ update_game :: proc(game: ^Game, dt, frame_time: f32) {
 		}
 
 	} else if game.state == .Game_Over {
+		if !audio.muted {
+			audio.muted = true
+		}
 		if game.ufo_time < 5 {
 			game.ufo_time += frame_time
 		} else {
@@ -129,6 +134,11 @@ update_game :: proc(game: ^Game, dt, frame_time: f32) {
 			game.difficulty = 1
 			game.lifes_available = 3
 			game.score = 0
+			if !audio.started {
+				audio.init()
+				audio.start()
+			}
+			audio.muted = false
 
 			restart(game, game.difficulty)
 		}
@@ -197,6 +207,7 @@ spawn_ufo :: proc(game: ^Game) {
 
 update_ufo :: proc(ufo: ^Ufo) {
 	if (ufo.active) {
+		audio.ufo_is_present = true
 		if ufo.direction_right {
 			ufo.position = {ufo.position.x + UFO_SPEED, ufo.position.y}
 			if (ufo.position.x > f32(SCREEN_GRID_SIZE)) {
@@ -208,6 +219,8 @@ update_ufo :: proc(ufo: ^Ufo) {
 				ufo.active = false
 			}
 		}
+	} else {
+		audio.ufo_is_present = false
 	}
 }
 
@@ -331,6 +344,8 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 				unordered_remove(&game.player_bullets, i)
 				game.num_aliens_alive -= 1
 				game.score += alien_stat.w
+				audio.bass.retrigger_time = audio.TRIGGER_OFFSET + 630 * f32(game.num_aliens_alive)
+				audio.alien_explosion_triggered = true
 
 				if game.num_aliens_alive == 0 {
 					game.difficulty = f32(int(1 + game.difficulty) % 11)
@@ -353,6 +368,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 
 		if rl.CheckCollisionRecs(bullet_rect, ufo_rect) {
 			game.ufo.active = false
+			audio.ufo_killed_triggered = true
 			unordered_remove(&game.player_bullets, i)
 
 			game.score += ufo_points[game.round_total_shots]
@@ -424,6 +440,7 @@ update_bullets :: proc(game: ^Game, dt: f32) {
 		// Check collision with player
 		if check_bullet_player_collision(game.alien_bullets[i], game.player_pos_x) {
 			game.lifes_available -= 1
+			audio.player_killed_triggered = true
 
 			// Create explosion at player position
 			explosion := create_explosion(

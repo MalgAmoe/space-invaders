@@ -2,6 +2,8 @@ package invaders
 
 import rl "vendor:raylib"
 
+import "audio"
+
 // Create and initialize a new game
 init_game :: proc() -> Game {
 	game: Game
@@ -39,6 +41,8 @@ restart :: proc(game: ^Game, difficulty_to_use: f32) {
 			SHIELD_Y_POS,
 		)
 	}
+
+	audio.bass.retrigger_time = audio.TRIGGER_TIME
 
 	// Clear explosions
 	if len(game.explosions) > 0 {

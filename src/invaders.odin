@@ -3,6 +3,8 @@ package invaders
 import "core:c"
 import rl "vendor:raylib"
 
+import "audio"
+
 // CONSTANTS
 SCREEN_GRID_SIZE :: 320
 PLAYER_SIZE :: 10
@@ -97,6 +99,7 @@ shutdown :: proc() {
 	delete(game.player_bullets)
 	delete(game.alien_bullets)
 	delete(game.explosions)
+	audio.close()
 	rl.CloseWindow()
 }
 
