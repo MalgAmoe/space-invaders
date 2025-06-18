@@ -6,6 +6,8 @@ This is the classic arcade game, space invaders. I try to stay close to the way 
 
 It's really fun, I get why it is a classic.
 
+You can try it here: https://nonsensinator.itch.io/kinda-space-invaders
+
 todo:
 
 - [x] aliens moving
