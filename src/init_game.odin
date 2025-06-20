@@ -34,6 +34,7 @@ restart :: proc(game: ^Game, difficulty_to_use: f32) {
 	game.alien_direction = 1
 	game.round_total_shots = 0
 	game.ufo_time = 0
+	game.ufo = Ufo{}
 	place_aliens(game, difficulty_to_use)
 	for &shield, i in game.shields {
 		shield = create_shield(
